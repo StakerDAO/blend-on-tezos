@@ -1,0 +1,19 @@
+resolver: lts-16.5
+
+packages:
+- .
+
+extra-deps:
+# required by loot-log
+- componentm-0.0.0.2
+- teardown-0.5.0.1
+
+# Lootbox (prelude, logging, configuration)
+- git: https://github.com/serokell/lootbox.git
+  commit: 18ced0d493348b4d6bae8517dff7ee6de6e0c9d9
+  # nix-sha256: 0y8gfdivjxx0jj8g651k5nzzwjg8mj9qw2s3v75vbpr8p008ymnr
+  subdirs:
+    - code/base
+    - code/config
+    - code/log
+    - code/prelude

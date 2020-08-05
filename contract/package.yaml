@@ -1,0 +1,90 @@
+name:                blnd-on-tezos
+version:             0.1.0.0
+github:              "https://github.com/StakerDAO/blnd-on-tezos"
+license:             BSD3
+author:              Serokell <hi@serokell.io>
+copyright:           "2020 Author name here"
+git:                 git@github.com:StakerDAO/blnd-on-tezos.git
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+description:         Please see the README on GitHub at <https://github.com/StakerDAO/blnd-on-tezos#readme>
+
+default-extensions:
+- AllowAmbiguousTypes
+- BangPatterns
+- ConstraintKinds
+- DataKinds
+- DefaultSignatures
+- DeriveDataTypeable
+- DeriveGeneric
+- DerivingStrategies
+- EmptyCase
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- OverloadedStrings
+- OverloadedLabels
+- PatternSynonyms
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TemplateHaskell
+- TupleSections
+- TypeFamilies
+- TypeOperators
+- UndecidableInstances
+- ViewPatterns
+- TypeApplications
+
+dependencies:
+- base-noprelude >= 4.9 && < 5
+- bytestring
+- loot-prelude
+- universum
+
+ghc-options:
+- -optP-Wno-nonportable-include-path
+- -Wall
+- -fno-warn-orphans
+- -Widentities
+- -Wincomplete-record-updates
+- -Werror
+
+library:
+  source-dirs: src
+  build-tools:
+  - autoexporter
+
+executables:
+  blnd-on-tezos:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - blnd-on-tezos
+
+tests:
+  blnd-on-tezos-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - blnd-on-tezos
