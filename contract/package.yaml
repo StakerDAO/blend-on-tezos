@@ -1,7 +1,6 @@
 name:                blnd-on-tezos
 version:             0.1.0.0
 github:              "https://github.com/StakerDAO/blnd-on-tezos"
-license:             BSD3
 author:              Serokell <hi@serokell.io>
 copyright:           "2020 Author name here"
 git:                 git@github.com:StakerDAO/blnd-on-tezos.git
@@ -15,43 +14,63 @@ extra-source-files:
 
 description:         Please see the README on GitHub at <https://github.com/StakerDAO/blnd-on-tezos#readme>
 
+verbatim:
+  cabal-version: 2.2
+
 default-extensions:
 - AllowAmbiguousTypes
+- ApplicativeDo
 - BangPatterns
+- BlockArguments
 - ConstraintKinds
 - DataKinds
 - DefaultSignatures
+- DeriveAnyClass
 - DeriveDataTypeable
+- DeriveFoldable
+- DeriveFunctor
 - DeriveGeneric
+- DeriveTraversable
 - DerivingStrategies
+- DerivingVia
 - EmptyCase
 - FlexibleContexts
 - FlexibleInstances
-- FunctionalDependencies
+- GADTs
 - GeneralizedNewtypeDeriving
 - LambdaCase
 - MultiParamTypeClasses
 - MultiWayIf
 - NamedFieldPuns
-- OverloadedStrings
+- NegativeLiterals
+- NoImplicitPrelude
+- NumDecimals
 - OverloadedLabels
+- OverloadedStrings
 - PatternSynonyms
+- PolyKinds
+- QuasiQuotes
 - RankNTypes
 - RecordWildCards
+- RecursiveDo
 - ScopedTypeVariables
 - StandaloneDeriving
+- StrictData
 - TemplateHaskell
 - TupleSections
+- TypeApplications
 - TypeFamilies
 - TypeOperators
 - UndecidableInstances
+- UndecidableSuperClasses
 - ViewPatterns
-- TypeApplications
+- NoApplicativeDo
+- RebindableSyntax
 
 dependencies:
 - base-noprelude >= 4.9 && < 5
 - bytestring
-- loot-prelude
+- morley-prelude
 - universum
 
 ghc-options:
@@ -66,6 +85,11 @@ library:
   source-dirs: src
   build-tools:
   - autoexporter
+  dependencies:
+  - indigo
+  - lorentz
+  - morley
+  - morley-ledgers
 
 executables:
   blnd-on-tezos:
