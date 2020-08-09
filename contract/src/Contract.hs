@@ -6,14 +6,11 @@ module Contract
   , mkStorage
   , LedgerValue
 
-  -- * Contract
-  , managedLedgerContract
-
-  , someFunc
+  , printContractWithInitStorage
+  , managedLedgerIndigo
   ) where
 
 import Indigo
-import Lorentz (Contract)
 
 import Indigo.Contracts.ManagedLedger (approve, burn, ensureNotPaused, getAllowance, getBalance,
                                        getTotalSupply, mint, setPause, transfer)
@@ -21,7 +18,9 @@ import qualified Lorentz.Contracts.ManagedLedger.Doc as L
 import Lorentz.Contracts.Spec.ApprovableLedgerInterface (GetAllowanceParams)
 import qualified Lorentz.Contracts.Spec.ApprovableLedgerInterface as AL
 import Lorentz.Contracts.Spec.ManagedLedgerInterface (ApproveCasParams, BurnParams, MintParams)
+import Tezos.Address (unsafeParseAddress)
 import Types
+import Universum (writeFile)
 
 type IStorageC s =
   ( ILedgerC s
@@ -169,9 +168,6 @@ data Parameter
 instance ParameterHasEntrypoints Parameter where
   type ParameterEntrypointsDerivation Parameter = EpdPlain
 
-managedLedgerContract :: Contract Parameter Storage
-managedLedgerContract = defaultContract $ compileIndigoContract managedLedgerIndigo
-
 managedLedgerIndigo :: IndigoContract Parameter Storage
 managedLedgerIndigo param = contractName "Managed Ledger" do
   contractGeneralDefault
@@ -192,5 +188,8 @@ managedLedgerIndigo param = contractName "Managed Ledger" do
     , #cSetText //-> setText @Storage
     )
 
-someFunc :: IO ()
-someFunc = putStrLn ("someFunc" :: String)
+printContractWithInitStorage :: IO ()
+printContractWithInitStorage = do
+  let st = toStrict $ printLorentzValue True $ mkStorage (unsafeParseAddress "tz1b3eGoYhuJ6cPPHAr1SZrYdZGtoYGyxqEW") mempty
+  saveAsMichelson @Parameter @Storage managedLedgerIndigo "morley-contract/contract.tz"
+  writeFile "morley-contract/storage.tz" st
