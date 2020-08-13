@@ -17,3 +17,21 @@ extra-deps:
     - code/config
     - code/log
     - code/prelude
+
+# morley
+- git: https://gitlab.com/morley-framework/morley.git
+  commit: a005d995642baa434078129fe83979c46449a516
+  subdirs:
+    - code/morley
+    - code/morley-prelude
+    - code/morley-ledgers
+    - code/lorentz
+    - code/indigo
+
+# required for morley
+- base58-bytestring-0.1.0
+- hex-text-0.1.0.0
+- show-type-0.1.1
+- named-0.3.0.1
+- vinyl-0.12.1
+- cryptonite-0.27

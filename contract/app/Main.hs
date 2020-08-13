@@ -1,6 +1,8 @@
 module Main where
 
-import Lib
+import Prelude
+
+import Contract
 
 main :: IO ()
-main = someFunc
+main = printContractWithInitStorage
