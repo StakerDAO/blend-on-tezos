@@ -12,8 +12,7 @@ module Contract
 
 import Indigo
 
-import Indigo.Contracts.ManagedLedger (approve, burn, ensureNotPaused, getAllowance, getBalance,
-                                       getTotalSupply, mint, setPause, transfer)
+import qualified Indigo.Contracts.ManagedLedger as ML
 import qualified Lorentz.Contracts.ManagedLedger.Doc as L
 import Lorentz.Contracts.Spec.ApprovableLedgerInterface (GetAllowanceParams)
 import qualified Lorentz.Contracts.Spec.ApprovableLedgerInterface as AL
@@ -52,7 +51,7 @@ approveCAS
 approveCAS parameter = do
   doc $ DDescription L.approveCASDoc
 
-  ensureNotPaused @s
+  ML.ensureNotPaused @s
 
   spender <- new$ parameter #! #spender
   value <- new$ parameter #! #value
@@ -174,17 +173,17 @@ managedLedgerIndigo param = contractName "Managed Ledger" do
   docStorage @Storage
   doc $ DDescription L.contractDoc
   entryCaseSimple param
-    ( #cTransfer //-> transfer @Storage
-    , #cApprove //-> approve @Storage
+    ( #cTransfer //-> ML.transfer @Storage
+    , #cApprove //-> ML.approve @Storage
     , #cApproveCAS //-> approveCAS @Storage
-    , #cGetAllowance //-> getAllowance @Storage
-    , #cGetBalance //-> getBalance @Storage
-    , #cGetTotalSupply //-> getTotalSupply @Storage
-    , #cSetPause //-> setPause @Storage
+    , #cGetAllowance //-> ML.getAllowance @Storage
+    , #cGetBalance //-> ML.getBalance @Storage
+    , #cGetTotalSupply //-> ML.getTotalSupply @Storage
+    , #cSetPause //-> ML.setPause @Storage
     , #cSetAdministrator //-> setAdministrator @Storage
     , #cGetAdministrator //-> getAdministrator @Storage
-    , #cMint //-> mint @Storage
-    , #cBurn //-> burn @Storage
+    , #cMint //-> ML.mint @Storage
+    , #cBurn //-> ML.burn @Storage
     , #cSetText //-> setText @Storage
     )
 
