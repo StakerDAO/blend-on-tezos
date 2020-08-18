@@ -20,13 +20,18 @@ extra-deps:
 
 # morley
 - git: https://gitlab.com/morley-framework/morley.git
-  commit: a005d995642baa434078129fe83979c46449a516
+  commit: 5b71450d16cd60ba88e3c74c1226423d8f0425a7
   subdirs:
     - code/morley
     - code/morley-prelude
-    - code/morley-ledgers
     - code/lorentz
     - code/indigo
+
+# morley-ledgers
+- git: https://gitlab.com/morley-framework/morley-ledgers.git
+  commit: 357b3396bc7b28bed987a0b28331c77c679b5cef
+  subdirs:
+    - code/morley-ledgers
 
 # required for morley
 - base58-bytestring-0.1.0

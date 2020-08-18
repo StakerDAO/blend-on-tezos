@@ -1,11 +1,9 @@
 {-# LANGUAGE BlockArguments #-}
 
 module Contract
-  ( -- * Storage
-    Storage
+  ( Storage
   , mkStorage
   , LedgerValue
-
   , printContractWithInitStorage
   , managedLedgerIndigo
   ) where
@@ -13,19 +11,20 @@ module Contract
 import Indigo
 
 import qualified Indigo.Contracts.ManagedLedger as ML
+import Lorentz (cCode)
 import qualified Lorentz.Contracts.ManagedLedger.Doc as L
 import Lorentz.Contracts.Spec.ApprovableLedgerInterface (GetAllowanceParams)
 import qualified Lorentz.Contracts.Spec.ApprovableLedgerInterface as AL
 import Lorentz.Contracts.Spec.ManagedLedgerInterface (ApproveCasParams, BurnParams, MintParams)
 import Tezos.Address (unsafeParseAddress)
-import Types
 import Universum (writeFile)
+
+import Types (LedgerValue, Storage, mkStorage)
 
 type IStorageC s =
   ( ILedgerC s
   , HasField s "admin" Address
   , HasField s "paused" Bool
-  , HasField s "text" MText
   )
 
 type ILedgerC s =
@@ -95,15 +94,6 @@ getAdministrator parameter = do
   doc $ DDescription L.getAdministratorDoc
   project parameter $ \_ -> getStorageField @s #admin
 
-setText
-  :: forall s bp.
-     ( bp :~> MText
-     , IStorageC s
-     )
-  => IndigoEntrypoint bp
-setText parameter = do
-  setStorageField @s #text parameter
-
 ----------------------------------------------------------------------------
 --  Helpers
 ----------------------------------------------------------------------------
@@ -160,7 +150,6 @@ data Parameter
   | GetAdministrator (View () Address)
   | Mint             MintParams
   | Burn             BurnParams
-  | SetText          MText
   deriving stock Generic
   deriving anyclass IsoValue
 
@@ -168,10 +157,11 @@ instance ParameterHasEntrypoints Parameter where
   type ParameterEntrypointsDerivation Parameter = EpdPlain
 
 managedLedgerIndigo :: IndigoContract Parameter Storage
-managedLedgerIndigo param = contractName "Managed Ledger" do
+managedLedgerIndigo param = contractName "BLND on Tezos" do
   contractGeneralDefault
   docStorage @Storage
-  doc $ DDescription L.contractDoc
+  doc $ DDescription
+    "This documentation describes a smart contract which implements FA1.2 interface and coin swap."
   entryCaseSimple param
     ( #cTransfer //-> ML.transfer @Storage
     , #cApprove //-> ML.approve @Storage
@@ -184,11 +174,16 @@ managedLedgerIndigo param = contractName "Managed Ledger" do
     , #cGetAdministrator //-> getAdministrator @Storage
     , #cMint //-> ML.mint @Storage
     , #cBurn //-> ML.burn @Storage
-    , #cSetText //-> setText @Storage
     )
 
 printContractWithInitStorage :: IO ()
 printContractWithInitStorage = do
-  let st = toStrict $ printLorentzValue True $ mkStorage (unsafeParseAddress "tz1b3eGoYhuJ6cPPHAr1SZrYdZGtoYGyxqEW") mempty
+  let storage = toStrict $
+        printLorentzValue True $
+        mkStorage (unsafeParseAddress "tz1b3eGoYhuJ6cPPHAr1SZrYdZGtoYGyxqEW") mempty
+      documentation = toStrict $
+        contractDocToMarkdown $ buildLorentzDocWithGitRev DGitRevisionUnknown $
+        cCode $ defaultContract $ compileIndigoContract @Parameter @Storage managedLedgerIndigo
   saveAsMichelson @Parameter @Storage managedLedgerIndigo "morley-contract/contract.tz"
-  writeFile "morley-contract/storage.tz" st
+  writeFile "morley-contract/storage.tz" storage
+  writeFile "doc/specification.md" documentation

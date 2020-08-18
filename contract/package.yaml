@@ -90,6 +90,7 @@ library:
   - lorentz
   - morley
   - morley-ledgers
+  - text
 
 executables:
   blnd-on-tezos:
