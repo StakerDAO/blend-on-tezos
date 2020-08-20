@@ -9,7 +9,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
 ## Table of contents
 
 - [Storage](#storage)
-  - [StorageSkeleton](#storage-StorageSkeleton)
+  - [Storage](#storage-Storage)
 - [Entrypoints](#entrypoints)
   - [transfer](#entrypoints-transfer)
   - [approve](#entrypoints-approve)
@@ -22,6 +22,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [getAdministrator](#entrypoints-getAdministrator)
   - [mint](#entrypoints-mint)
   - [burn](#entrypoints-burn)
+  - [burnq](#entrypoints-burnq)
   - [lock](#entrypoints-lock)
 
 **[Definitions](#definitions)**
@@ -42,7 +43,9 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [Natural](#types-Natural)
   - [Outcome](#types-Outcome)
   - [OutcomeStatus](#types-OutcomeStatus)
+  - [Storage](#types-Storage)
   - [StorageFields](#types-StorageFields)
+  - [StorageSkeleton](#types-StorageSkeleton)
   - [Swap](#types-Swap)
   - [SwapId](#types-SwapId)
   - [Text](#types-Text)
@@ -62,20 +65,19 @@ This documentation describes a smart contract which implements FA1.2 interface a
 
 ## Storage
 
-<a name="storage-StorageSkeleton"></a>
+<a name="storage-Storage"></a>
 
 ---
 
-### `StorageSkeleton`
+### `Storage`
 
-Managed ledger storage skeleton.
+Managed ledger storage fields.
 
-**Structure (example):** `StorageSkeleton StorageFields` = 
-  * ***ledger*** :[`BigMap`](#types-BigMap) [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen) (***balance*** : [`Natural`](#types-Natural))
-  * ***approvals*** :[`BigMap`](#types-BigMap) (***owner*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen), ***spender*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)) [`Natural`](#types-Natural)
-  * ***fields*** :[`StorageFields`](#types-StorageFields)
+**Structure:** 
+  * ***sTokenStorage*** :[`StorageSkeleton`](#types-StorageSkeleton) [`StorageFields`](#types-StorageFields)
+  * ***sBridgeStorage*** :[`Storage`](#types-Storage)
 
-**Final Michelson representation (example):** `StorageSkeleton StorageFields` = `pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))`
+**Final Michelson representation:** `pair (pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (pair (or unit (or unit unit)) (pair (option bytes) (option bytes)))))`
 
 
 
@@ -439,6 +441,38 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+<a name="entrypoints-burnq"></a>
+
+---
+
+### `burnq`
+
+Destroys the given amount of tokens on the account associated with the given address.
+
+**Argument:** 
+  + **In Haskell:** (***from*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen), ***value*** : [`Natural`](#types-Natural))
+  + **In Michelson:** `(pair (address :from) (nat :value))`
+    + **Example:** <span id="example-id">`Pair "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB" 0`</span>
+
+<details>
+  <summary><b>How to call this entrypoint</b></summary>
+
+0. Construct an argument for the entrypoint.
+1. Call contract's `burnq` entrypoint passing the constructed argument.
+</details>
+<p>
+
+
+
+**Authorization:** The sender has to be `administrator`.
+
+**Possible errors:**
+* [`SenderIsNotAdmin`](#errors-SenderIsNotAdmin) — Entrypoint executed not by its administrator.
+
+* [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
+
+
+
 <a name="entrypoints-lock"></a>
 
 ---
@@ -447,7 +481,7 @@ Destroys the given amount of tokens on the account associated with the given add
 
 **Argument:** 
   + **In Haskell:** [`LockParams`](#types-LockParams)
-  + **In Michelson:** `(pair (pair (bytes %id) (address %to)) (pair (nat %amount) (pair (timestamp %releaseTime) (option %secretHash bytes))))`
+  + **In Michelson:** `(pair (pair (bytes %lpId) (address %lpTo)) (pair (nat %lpAmount) (pair (timestamp %lpReleaseTime) (option %lpSecretHash bytes))))`
     + **Example:** <span id="example-id">`Pair (Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB") (Pair 0 (Pair "2019-07-26T12:09:12Z" (Some 0x0a)))`</span>
 
 <details>
@@ -594,11 +628,11 @@ Signed number.
 Outcome storage fields.
 
 **Structure:** 
-  * ***id*** :[`SwapId`](#types-SwapId)
-  * ***to*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
-  * ***amount*** :[`Natural`](#types-Natural)
-  * ***releaseTime*** :[`Timestamp`](#types-Timestamp)
-  * ***secretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
+  * ***lpId*** :[`SwapId`](#types-SwapId)
+  * ***lpTo*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
+  * ***lpAmount*** :[`Natural`](#types-Natural)
+  * ***lpReleaseTime*** :[`Timestamp`](#types-Timestamp)
+  * ***lpSecretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
 
 **Final Michelson representation:** `pair (pair bytes address) (pair nat (pair timestamp (option bytes)))`
 
@@ -651,9 +685,9 @@ Unsigned number.
 Outcome storage fields.
 
 **Structure:** 
-  * ***status*** :[`OutcomeStatus`](#types-OutcomeStatus)
-  * ***secret*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
-  * ***secretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
+  * ***oStatus*** :[`OutcomeStatus`](#types-OutcomeStatus)
+  * ***oSecret*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
+  * ***oSecretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
 
 **Final Michelson representation:** `pair (or unit (or unit unit)) (pair (option bytes) (option bytes))`
 
@@ -677,6 +711,22 @@ OutcomeStatus.
 
 
 
+<a name="types-Storage"></a>
+
+---
+
+### `Storage`
+
+Managed ledger storage fields.
+
+**Structure:** 
+  * ***swaps*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Swap`](#types-Swap)
+  * ***outcomes*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Outcome`](#types-Outcome)
+
+**Final Michelson representation:** `pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (pair (or unit (or unit unit)) (pair (option bytes) (option bytes))))`
+
+
+
 <a name="types-StorageFields"></a>
 
 ---
@@ -689,10 +739,25 @@ Managed ledger storage fields.
   * ***admin*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
   * ***paused*** :[`Bool`](#types-Bool)
   * ***totalSupply*** :[`Natural`](#types-Natural)
-  * ***swaps*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Swap`](#types-Swap)
-  * ***outcomes*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Outcome`](#types-Outcome)
 
-**Final Michelson representation:** `pair (pair address bool) (pair nat (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (pair (or unit (or unit unit)) (pair (option bytes) (option bytes))))))`
+**Final Michelson representation:** `pair address (pair bool nat)`
+
+
+
+<a name="types-StorageSkeleton"></a>
+
+---
+
+### `StorageSkeleton`
+
+Managed ledger storage skeleton.
+
+**Structure (example):** `StorageSkeleton StorageFields` = 
+  * ***ledger*** :[`BigMap`](#types-BigMap) [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen) (***balance*** : [`Natural`](#types-Natural))
+  * ***approvals*** :[`BigMap`](#types-BigMap) (***owner*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen), ***spender*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)) [`Natural`](#types-Natural)
+  * ***fields*** :[`StorageFields`](#types-StorageFields)
+
+**Final Michelson representation (example):** `StorageSkeleton StorageFields` = `pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))`
 
 
 
@@ -705,10 +770,10 @@ Managed ledger storage fields.
 Swap storage fields.
 
 **Structure:** 
-  * ***from*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
-  * ***to*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
-  * ***amount*** :[`Natural`](#types-Natural)
-  * ***releaseTime*** :[`Timestamp`](#types-Timestamp)
+  * ***sFrom*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
+  * ***sTo*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
+  * ***sAmount*** :[`Natural`](#types-Natural)
+  * ***sReleaseTime*** :[`Timestamp`](#types-Timestamp)
 
 **Final Michelson representation:** `pair (pair address address) (pair nat timestamp)`
 
