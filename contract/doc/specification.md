@@ -22,6 +22,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [getAdministrator](#entrypoints-getAdministrator)
   - [mint](#entrypoints-mint)
   - [burn](#entrypoints-burn)
+  - [lock](#entrypoints-lock)
 
 **[Definitions](#definitions)**
 
@@ -35,11 +36,15 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [ByteString](#types-ByteString)
   - [Contract](#types-Contract)
   - [Integer](#types-Integer)
+  - [LockParams](#types-LockParams)
+  - [Maybe](#types-Maybe)
   - [Named entry](#types-Named-entry)
   - [Natural](#types-Natural)
   - [Outcome](#types-Outcome)
+  - [OutcomeStatus](#types-OutcomeStatus)
   - [StorageFields](#types-StorageFields)
   - [Swap](#types-Swap)
+  - [SwapId](#types-SwapId)
   - [Text](#types-Text)
   - [Timestamp](#types-Timestamp)
   - [View](#types-View)
@@ -49,6 +54,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [NotEnoughAllowance](#errors-NotEnoughAllowance)
   - [NotEnoughBalance](#errors-NotEnoughBalance)
   - [SenderIsNotAdmin](#errors-SenderIsNotAdmin)
+  - [SwapLockAlreadyExists](#errors-SwapLockAlreadyExists)
   - [TokenOperationsArePaused](#errors-TokenOperationsArePaused)
   - [UnsafeAllowanceChange](#errors-UnsafeAllowanceChange)
 
@@ -433,6 +439,34 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+<a name="entrypoints-lock"></a>
+
+---
+
+### `lock`
+
+**Argument:** 
+  + **In Haskell:** [`LockParams`](#types-LockParams)
+  + **In Michelson:** `(pair (pair (bytes %id) (address %to)) (pair (nat %amount) (pair (timestamp %releaseTime) (option %secretHash bytes))))`
+    + **Example:** <span id="example-id">`Pair (Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB") (Pair 0 (Pair "2019-07-26T12:09:12Z" (Some 0x0a)))`</span>
+
+<details>
+  <summary><b>How to call this entrypoint</b></summary>
+
+0. Construct an argument for the entrypoint.
+1. Call contract's `lock` entrypoint passing the constructed argument.
+</details>
+<p>
+
+
+
+**Possible errors:**
+* [`SwapLockAlreadyExists`](#errors-SwapLockAlreadyExists) — Lock with this id already exists
+
+* [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
+
+
+
 
 
 
@@ -551,6 +585,37 @@ Signed number.
 
 
 
+<a name="types-LockParams"></a>
+
+---
+
+### `LockParams`
+
+Outcome storage fields.
+
+**Structure:** 
+  * ***id*** :[`SwapId`](#types-SwapId)
+  * ***to*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
+  * ***amount*** :[`Natural`](#types-Natural)
+  * ***releaseTime*** :[`Timestamp`](#types-Timestamp)
+  * ***secretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
+
+**Final Michelson representation:** `pair (pair bytes address) (pair nat (pair timestamp (option bytes)))`
+
+
+
+<a name="types-Maybe"></a>
+
+---
+
+### `Maybe`
+
+Option primitive.
+
+**Final Michelson representation (example):** `Maybe Integer` = `option int`
+
+
+
 <a name="types-Named-entry"></a>
 
 ---
@@ -585,15 +650,30 @@ Unsigned number.
 
 Outcome storage fields.
 
+**Structure:** 
+  * ***status*** :[`OutcomeStatus`](#types-OutcomeStatus)
+  * ***secret*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
+  * ***secretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
+
+**Final Michelson representation:** `pair (or unit (or unit unit)) (pair (option bytes) (option bytes))`
+
+
+
+<a name="types-OutcomeStatus"></a>
+
+---
+
+### `OutcomeStatus`
+
+OutcomeStatus.
+
 **Structure:** *one of* 
 + **Refunded**()
-+ **HashRevealed**
-[`ByteString`](#types-ByteString)
-+ **SecretRevealed**
-[`ByteString`](#types-ByteString)
++ **HashRevealed**()
++ **SecretRevealed**()
 
 
-**Final Michelson representation:** `or unit (or bytes bytes)`
+**Final Michelson representation:** `or unit (or unit unit)`
 
 
 
@@ -609,10 +689,10 @@ Managed ledger storage fields.
   * ***admin*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
   * ***paused*** :[`Bool`](#types-Bool)
   * ***totalSupply*** :[`Natural`](#types-Natural)
-  * ***swaps*** :[`BigMap`](#types-BigMap) [`ByteString`](#types-ByteString) [`Swap`](#types-Swap)
-  * ***outcomes*** :[`BigMap`](#types-BigMap) [`ByteString`](#types-ByteString) [`Outcome`](#types-Outcome)
+  * ***swaps*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Swap`](#types-Swap)
+  * ***outcomes*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Outcome`](#types-Outcome)
 
-**Final Michelson representation:** `pair (pair address bool) (pair nat (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes)))))`
+**Final Michelson representation:** `pair (pair address bool) (pair nat (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (pair (or unit (or unit unit)) (pair (option bytes) (option bytes))))))`
 
 
 
@@ -631,6 +711,21 @@ Swap storage fields.
   * ***releaseTime*** :[`Timestamp`](#types-Timestamp)
 
 **Final Michelson representation:** `pair (pair address address) (pair nat timestamp)`
+
+
+
+<a name="types-SwapId"></a>
+
+---
+
+### `SwapId`
+
+SwapId.
+
+**Structure:** 
+[`ByteString`](#types-ByteString)
+
+**Final Michelson representation:** `bytes`
 
 
 
@@ -785,6 +880,20 @@ Provided error argument will be of type (***required*** : [`Natural`](#types-Nat
 **Fires if:** Entrypoint executed not by its administrator.
 
 **Representation:** `("SenderIsNotAdmin", ())`.
+
+<a name="errors-SwapLockAlreadyExists"></a>
+
+---
+
+### `SwapLockAlreadyExists`
+
+**Class:** Action exception
+
+**Fires if:** Lock with this id already exists
+
+**Representation:** `("SwapLockAlreadyExists", <error argument>)`.
+
+Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
 
 <a name="errors-TokenOperationsArePaused"></a>
 

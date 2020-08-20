@@ -4,6 +4,10 @@ module Types
   , LedgerValue
   , mkStorage
   , mkStorageSkeleton
+  , SwapId (..)
+  , Swap
+  , Outcome
+  , OutcomeStatus (..)
   ) where
 
 import Prelude (sum)
@@ -16,7 +20,14 @@ import Lorentz.Contracts.Spec.ApprovableLedgerInterface (GetAllowanceParams)
 ----------------------------------------------------------------------------
 -- Storage
 ----------------------------------------------------------------------------
-type SwapId = ByteString
+newtype SwapId = SwapId ByteString
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (IsoValue, HasAnnotation)
+
+instance TypeHasDoc SwapId where
+  typeDocMdDescription = "SwapId."
+  typeDocHaskellRep = homomorphicTypeDocHaskellRep
+  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
 
 data Swap = MkSwap
    { from        :: Address
@@ -31,12 +42,24 @@ instance TypeHasDoc Swap where
   typeDocHaskellRep = homomorphicTypeDocHaskellRep
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
 
-data Outcome
-   = Refunded
-   | HashRevealed ByteString
-   | SecretRevealed ByteString
-   deriving stock Generic
-   deriving anyclass (IsoValue, HasAnnotation)
+data OutcomeStatus
+  = Refunded
+  | HashRevealed
+  | SecretRevealed
+  deriving stock Generic
+  deriving anyclass (IsoValue, HasAnnotation)
+
+instance TypeHasDoc OutcomeStatus where
+  typeDocMdDescription = "OutcomeStatus."
+  typeDocHaskellRep = homomorphicTypeDocHaskellRep
+  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+
+data Outcome = Outcome
+  { status     :: OutcomeStatus
+  , secret     :: Maybe ByteString
+  , secretHash :: Maybe ByteString
+  } deriving stock Generic
+    deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Outcome where
   typeDocMdDescription = "Outcome storage fields."
@@ -82,6 +105,12 @@ instance I.HasField StorageFields "paused" Bool where
 instance I.HasField StorageFields "totalSupply" Natural where
   fieldLens = fieldLensADT #totalSupply
 
+instance I.HasField StorageFields "swaps" (BigMap SwapId Swap) where
+  fieldLens = fieldLensADT #swaps
+
+instance I.HasField StorageFields "outcomes" (BigMap SwapId Outcome) where
+  fieldLens = fieldLensADT #outcomes
+
 instance I.HasField Storage "admin" Address where
   fieldLens = fieldLensDeeper #fields
 
@@ -89,6 +118,12 @@ instance I.HasField Storage "paused" Bool where
   fieldLens = fieldLensDeeper #fields
 
 instance I.HasField Storage "totalSupply" Natural where
+  fieldLens = fieldLensDeeper #fields
+
+instance I.HasField Storage "swaps" (BigMap SwapId Swap) where
+  fieldLens = fieldLensDeeper #fields
+
+instance I.HasField Storage "outcomes" (BigMap SwapId Outcome) where
   fieldLens = fieldLensDeeper #fields
 
 -- | Create a default storage with ability to set some balances to
