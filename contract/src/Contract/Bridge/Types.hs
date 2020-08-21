@@ -2,7 +2,6 @@ module Contract.Bridge.Types
   ( LockParams (..)
   , SwapId (..)
   , Swap (..)
-  , OutcomeStatus (..)
   , Outcome (..)
   , RevealSecretHashParams (..)
   ) where
@@ -31,24 +30,12 @@ instance TypeHasDoc Swap where
   typeDocHaskellRep = homomorphicTypeDocHaskellRep
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
 
-data OutcomeStatus
+data Outcome
   = Refunded
-  | HashRevealed
-  | SecretRevealed
+  | HashRevealed ByteString
+  | SecretRevealed ByteString
   deriving stock Generic
   deriving anyclass (IsoValue, HasAnnotation)
-
-instance TypeHasDoc OutcomeStatus where
-  typeDocMdDescription = "OutcomeStatus."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
-  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
-
-data Outcome = Outcome
-  { oStatus     :: OutcomeStatus
-  , oSecret     :: Maybe ByteString
-  , oSecretHash :: Maybe ByteString
-  } deriving stock Generic
-    deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Outcome where
   typeDocMdDescription = "Outcome storage fields."

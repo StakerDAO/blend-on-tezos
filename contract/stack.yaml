@@ -20,7 +20,7 @@ extra-deps:
 
 # morley
 - git: https://gitlab.com/morley-framework/morley.git
-  commit: 5b71450d16cd60ba88e3c74c1226423d8f0425a7
+  commit: 9def1f29ec812781421fa3a35fddb4669f056e6e
   subdirs:
     - code/morley
     - code/morley-prelude

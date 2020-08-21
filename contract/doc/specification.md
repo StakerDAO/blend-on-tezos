@@ -42,7 +42,6 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [Named entry](#types-Named-entry)
   - [Natural](#types-Natural)
   - [Outcome](#types-Outcome)
-  - [OutcomeStatus](#types-OutcomeStatus)
   - [RevealSecretHashParams](#types-RevealSecretHashParams)
   - [Storage](#types-Storage)
   - [StorageFields](#types-StorageFields)
@@ -81,7 +80,7 @@ Managed ledger storage fields.
   * ***sTokenStorage*** :[`StorageSkeleton`](#types-StorageSkeleton) [`StorageFields`](#types-StorageFields)
   * ***sBridgeStorage*** :[`Storage`](#types-Storage)
 
-**Final Michelson representation:** `pair (pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (pair (or unit (or unit unit)) (pair (option bytes) (option bytes)))))`
+**Final Michelson representation:** `pair (pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))`
 
 
 
@@ -686,30 +685,15 @@ Unsigned number.
 
 Outcome storage fields.
 
-**Structure:** 
-  * ***oStatus*** :[`OutcomeStatus`](#types-OutcomeStatus)
-  * ***oSecret*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
-  * ***oSecretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
-
-**Final Michelson representation:** `pair (or unit (or unit unit)) (pair (option bytes) (option bytes))`
-
-
-
-<a name="types-OutcomeStatus"></a>
-
----
-
-### `OutcomeStatus`
-
-OutcomeStatus.
-
 **Structure:** *one of* 
 + **Refunded**()
-+ **HashRevealed**()
-+ **SecretRevealed**()
++ **HashRevealed**
+[`ByteString`](#types-ByteString)
++ **SecretRevealed**
+[`ByteString`](#types-ByteString)
 
 
-**Final Michelson representation:** `or unit (or unit unit)`
+**Final Michelson representation:** `or unit (or bytes bytes)`
 
 
 
@@ -741,7 +725,7 @@ Managed ledger storage fields.
   * ***swaps*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Swap`](#types-Swap)
   * ***outcomes*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Outcome`](#types-Outcome)
 
-**Final Michelson representation:** `pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (pair (or unit (or unit unit)) (pair (option bytes) (option bytes))))`
+**Final Michelson representation:** `pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes)))`
 
 
 

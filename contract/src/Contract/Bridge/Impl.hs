@@ -7,7 +7,7 @@ import Indigo
 
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridgeStorage)
-import Contract.Bridge.Types (LockParams, OutcomeStatus (..), RevealSecretHashParams)
+import Contract.Bridge.Types (LockParams, RevealSecretHashParams)
 import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
 
 data Parameter
@@ -56,10 +56,7 @@ lock parameter = do
     ))
 
   whenSome (parameter #! #lpSecretHash) $ \hash ->
-    setStorageField @s #outcomes $ outcomes +: (swapId, construct
-      ( constExpr HashRevealed, some (varExpr hash)
-      , constExpr Nothing
-      ))
+    setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cHashRevealed hash)
 
 revealSecretHash
   :: forall s sp.
@@ -78,10 +75,8 @@ revealSecretHash parameter = do
   outcomes <- getStorageField @s #outcomes
   whenSome (outcomes #: swapId) $ \_ -> failCustom #secreteHashIsAlreadySet swapId
 
-  setStorageField @s #outcomes $ outcomes +: (swapId, construct
-    ( constExpr HashRevealed
-    , some (parameter #! #rshpSecreteHash), constExpr Nothing
-    ))
+  setStorageField @s #outcomes $ outcomes +: 
+    (swapId, wrap #cHashRevealed $ parameter #! #rshpSecreteHash)
 
 ----------------------------------------------------------------------------
 --  Helpers
