@@ -1,43 +1,49 @@
 module Contract.Bridge.Storage
-  ( Storage
+  ( BridgeStorage
   , mkStorage
-  , HasBridgeStorage
+  , HasBridge
   ) where
 
 import Indigo
 
 import Contract.Bridge.Types (SwapId, Swap, Outcome)
 
-data Storage = Storage
-  { swaps    :: BigMap SwapId Swap
-  , outcomes :: BigMap SwapId Outcome
+data BridgeStorage = BridgeStorage
+  { sSwaps    :: BigMap SwapId Swap
+  , sOutcomes :: BigMap SwapId Outcome
   } deriving stock Generic
     deriving anyclass (IsoValue, HasAnnotation)
 
-mkStorage :: Storage
-mkStorage = Storage
-  { swaps = mempty
-  , outcomes = mempty
+mkStorage :: BridgeStorage
+mkStorage = BridgeStorage
+  { sSwaps = mempty
+  , sOutcomes = mempty
   }
 
-type HasBridgeStorage s =
+type HasBridge s =
   ( HasField s "swaps" (BigMap SwapId Swap)
   , HasField s "outcomes" (BigMap SwapId Outcome)
   , HasStorage s
   , IsObject s
   )
 
-instance TypeHasDoc Storage where
-  typeDocMdDescription = "Managed ledger storage fields."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
+instance TypeHasDoc BridgeStorage where
+  typeDocMdDescription = "Bridge storage."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "BridgeStorage", '( 'Nothing,
+         '[ '("sSwaps", "Container with all swaps.")
+          , '("sOutcomes", "Container with results of each swap.")
+          ])
+       )
+    ]
 
-instance HasFieldOfType Storage name field =>
-         StoreHasField Storage name field where
+instance HasFieldOfType BridgeStorage name field =>
+         StoreHasField BridgeStorage name field where
   storeFieldOps = storeFieldOpsADT
 
-instance HasField Storage "swaps" (BigMap SwapId Swap) where
-  fieldLens = fieldLensADT #swaps
+instance HasField BridgeStorage "swaps" (BigMap SwapId Swap) where
+  fieldLens = fieldLensADT #sSwaps
 
-instance HasField Storage "outcomes" (BigMap SwapId Outcome) where
-  fieldLens = fieldLensADT #outcomes
+instance HasField BridgeStorage "outcomes" (BigMap SwapId Outcome) where
+  fieldLens = fieldLensADT #sOutcomes

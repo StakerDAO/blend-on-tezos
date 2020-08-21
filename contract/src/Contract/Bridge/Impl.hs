@@ -6,7 +6,7 @@ module Contract.Bridge.Impl
 import Indigo
 
 import Contract.Bridge.Errors ()
-import Contract.Bridge.Storage (HasBridgeStorage)
+import Contract.Bridge.Storage (HasBridge)
 import Contract.Bridge.Types (LockParams, RevealSecretHashParams)
 import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
 
@@ -23,7 +23,7 @@ entrypoints
   :: forall storage param.
      ( param :~> Parameter
      , HasManagedLedgerStorage storage
-     , HasBridgeStorage storage
+     , HasBridge storage
      , HasSideEffects
      )
   => IndigoEntrypoint param
@@ -37,7 +37,7 @@ lock
   :: forall s sp.
      ( sp :~> LockParams
      , HasManagedLedgerStorage s
-     , HasBridgeStorage s
+     , HasBridge s
      )
   => IndigoEntrypoint sp
 lock parameter = do
@@ -61,7 +61,7 @@ lock parameter = do
 revealSecretHash
   :: forall s sp.
        ( sp :~> RevealSecretHashParams
-       , HasBridgeStorage s
+       , HasBridge s
        )
     => IndigoEntrypoint sp
 revealSecretHash parameter = do
@@ -75,7 +75,7 @@ revealSecretHash parameter = do
   outcomes <- getStorageField @s #outcomes
   whenSome (outcomes #: swapId) $ \_ -> failCustom #secreteHashIsAlreadySet swapId
 
-  setStorageField @s #outcomes $ outcomes +: 
+  setStorageField @s #outcomes $ outcomes +:
     (swapId, wrap #cHashRevealed $ parameter #! #rshpSecreteHash)
 
 ----------------------------------------------------------------------------

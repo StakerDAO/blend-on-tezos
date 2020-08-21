@@ -13,8 +13,7 @@ newtype SwapId = SwapId ByteString
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc SwapId where
-  typeDocMdDescription = "SwapId."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
+  typeDocMdDescription = "Id of the swap."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
 
 data Swap = Swap
@@ -26,9 +25,17 @@ data Swap = Swap
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Swap where
-  typeDocMdDescription = "Swap storage fields."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
+  typeDocMdDescription = "Swap information."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "Swap", '( 'Nothing,
+         '[ '("sFrom", "Address of swap initiator.")
+          , '("sTo", "Address of swap reciever.")
+          , '("sAmount", "Number of tokens in swap.")
+          , '("sReleaseTime", "Time for swap process.")
+          ])
+       )
+    ]
 
 data Outcome
   = Refunded
@@ -39,8 +46,12 @@ data Outcome
 
 instance TypeHasDoc Outcome where
   typeDocMdDescription = "Outcome storage fields."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+     '[ '("Refunded", '( 'Just "Swap was refunded", '[]))
+      , '("HashRevealed", '( 'Just "Secret hash was revealed", '[]))
+      , '("SecretRevealed", '( 'Just "Secret was revealed", '[]))
+      ]
 
 data LockParams = LockParams
   { lpId          :: SwapId
@@ -53,8 +64,17 @@ data LockParams = LockParams
 
 instance TypeHasDoc LockParams where
   typeDocMdDescription = "Lock entrypoint params."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "LockParams", '( 'Just "Swap was refunded", 
+         '[ '("lpId", "Swap id.")
+          , '("lpTo", "Address of swap reciever.")
+          , '("lpAmount", "Number of tokens in swap.")
+          , '("lpReleaseTime", "Time for swap process.")
+          , '("lpSecretHash", "Hash of the secret.")
+          ])
+       )
+    ]
 
 data RevealSecretHashParams = RevealSecretHashParams
   { rshpId          :: SwapId
@@ -64,6 +84,12 @@ data RevealSecretHashParams = RevealSecretHashParams
 
 instance TypeHasDoc RevealSecretHashParams where
   typeDocMdDescription = "RevealSecretHash entrypoint params."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "RevealSecretHashParams", '( 'Just "Swap was refunded", 
+         '[ '("rshpId", "Swap id.")
+          , '("rshpSecreteHash", "Hash of the secret.")
+          ])
+       )
+    ]
 

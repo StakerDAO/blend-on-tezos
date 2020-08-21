@@ -29,26 +29,24 @@ parameter (or (or (or (or (pair %transfer (address :from)
                                           (option %lpSecretHash bytes))))
                   (pair %revealSecretHash (bytes %rshpId)
                                           (bytes %rshpSecreteHash))));
-storage (pair (pair %sTokenStorage (big_map %ledger address
-                                                    (nat :balance))
-                                   (pair (big_map %approvals (pair 
-                                                                   (address :owner)
-                                                                   (address :spender))
-                                                             nat)
-                                         (pair %fields (address %admin)
-                                                       (pair (bool %paused)
-                                                             (nat %totalSupply)))))
-              (pair %sBridgeStorage (big_map %swaps bytes
-                                                    (pair (pair (address %sFrom)
-                                                                (address %sTo))
-                                                          (pair (nat %sAmount)
-                                                                (timestamp %sReleaseTime))))
-                                    (big_map %outcomes bytes
-                                                       (or (unit %refunded)
-                                                           (or 
-                                                               (bytes %hashRevealed)
-                                                               (bytes %secretRevealed))))));
-code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair address nat)) (or (pair address (pair nat nat)) (or (pair (pair address address) (contract nat)) (pair address (contract nat))))) (or (or (pair unit (contract nat)) (or bool address)) (or (pair unit (contract address)) (or (pair address nat) (pair address nat))))) (or (pair (pair bytes address) (pair nat (pair timestamp (option bytes)))) (pair bytes bytes))) (pair (pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))));
+storage (pair (pair %sToken (pair (big_map %mlsLedger address
+                                                      (nat :balance))
+                                  (big_map %mlsApprovals (pair (address :owner)
+                                                               (address :spender))
+                                                         nat))
+                            (pair (address %mlsAdmin)
+                                  (pair (bool %mlsPaused)
+                                        (nat %mlsTotalSupply))))
+              (pair %sBridge (big_map %sSwaps bytes
+                                              (pair (pair (address %sFrom)
+                                                          (address %sTo))
+                                                    (pair (nat %sAmount)
+                                                          (timestamp %sReleaseTime))))
+                             (big_map %sOutcomes bytes
+                                                 (or (unit %refunded)
+                                                     (or (bytes %hashRevealed)
+                                                         (bytes %secretRevealed))))));
+code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair address nat)) (or (pair address (pair nat nat)) (or (pair (pair address address) (contract nat)) (pair address (contract nat))))) (or (or (pair unit (contract nat)) (or bool address)) (or (pair unit (contract address)) (or (pair address nat) (pair address nat))))) (or (pair (pair bytes address) (pair nat (pair timestamp (option bytes)))) (pair bytes bytes))) (pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))));
        NIL operation;
        SWAP;
        DUP;
@@ -65,13 +63,13 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
              DIP { CDR;
                    DUP;
                    CAR;
-                   DIP { CDR } };
-             DIP { DIP { DUP;
+                   DIP { CDR;
+                         DUP;
                          CAR;
-                         DIP { CDR;
-                               DUP;
-                               CAR;
-                               DIP { CDR } } } } };
+                         DIP { CDR } } };
+             DUP;
+             CAR;
+             DIP { CDR } };
        DUP;
        IF_LEFT { DUP;
                  IF_LEFT { IF_LEFT { IF_LEFT { DIP 6
@@ -932,9 +930,9 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                            DROP 2 };
                  DROP };
        DROP;
-       DIP { DIP { DIP { PAIR };
-                   PAIR } };
-       DIP { PAIR };
+       PAIR;
+       DIP { DIP { PAIR };
+             PAIR };
        PAIR;
        DIP { PAIR };
        PAIR;

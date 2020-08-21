@@ -4,7 +4,7 @@
 
 
 
-This documentation describes a smart contract which implements FA1.2 interface and coin swap.
+This documentation describes a smart contract which implements FA1.2 interface and network bridge.
 
 ## Table of contents
 
@@ -34,18 +34,17 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [Address (no entrypoint)](#types-Address-lparenno-entrypointrparen)
   - [BigMap](#types-BigMap)
   - [Bool](#types-Bool)
+  - [BridgeStorage](#types-BridgeStorage)
   - [ByteString](#types-ByteString)
   - [Contract](#types-Contract)
   - [Integer](#types-Integer)
   - [LockParams](#types-LockParams)
+  - [ManagedLedgerStorage](#types-ManagedLedgerStorage)
   - [Maybe](#types-Maybe)
   - [Named entry](#types-Named-entry)
   - [Natural](#types-Natural)
   - [Outcome](#types-Outcome)
   - [RevealSecretHashParams](#types-RevealSecretHashParams)
-  - [Storage](#types-Storage)
-  - [StorageFields](#types-StorageFields)
-  - [StorageSkeleton](#types-StorageSkeleton)
   - [Swap](#types-Swap)
   - [SwapId](#types-SwapId)
   - [Text](#types-Text)
@@ -74,13 +73,15 @@ This documentation describes a smart contract which implements FA1.2 interface a
 
 ### `Storage`
 
-Managed ledger storage fields.
+Storage of the contract. It is splitted on two parts, one for `Token` storage and one for `Bridge` storage.
 
 **Structure:** 
-  * ***sTokenStorage*** :[`StorageSkeleton`](#types-StorageSkeleton) [`StorageFields`](#types-StorageFields)
-  * ***sBridgeStorage*** :[`Storage`](#types-Storage)
+  * ***token*** :[`ManagedLedgerStorage`](#types-ManagedLedgerStorage)    
+Managed ledger connected storage.
+  * ***bridge*** :[`BridgeStorage`](#types-BridgeStorage)    
+Bridge connected storage.
 
-**Final Michelson representation:** `pair (pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))`
+**Final Michelson representation:** `pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))`
 
 
 
@@ -584,6 +585,24 @@ Bool primitive.
 
 
 
+<a name="types-BridgeStorage"></a>
+
+---
+
+### `BridgeStorage`
+
+Bridge storage.
+
+**Structure:** 
+  * ***swaps*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Swap`](#types-Swap)    
+Container with all swaps.
+  * ***outcomes*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Outcome`](#types-Outcome)    
+Container with results of each swap.
+
+**Final Michelson representation:** `pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes)))`
+
+
+
 <a name="types-ByteString"></a>
 
 ---
@@ -629,13 +648,42 @@ Signed number.
 Lock entrypoint params.
 
 **Structure:** 
-  * ***lpId*** :[`SwapId`](#types-SwapId)
-  * ***lpTo*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
-  * ***lpAmount*** :[`Natural`](#types-Natural)
-  * ***lpReleaseTime*** :[`Timestamp`](#types-Timestamp)
-  * ***lpSecretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)
+  * ***id*** :[`SwapId`](#types-SwapId)    
+Swap id.
+  * ***to*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)    
+Address of swap reciever.
+  * ***amount*** :[`Natural`](#types-Natural)    
+Number of tokens in swap.
+  * ***releaseTime*** :[`Timestamp`](#types-Timestamp)    
+Time for swap process.
+  * ***secretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)    
+Hash of the secret.
 
 **Final Michelson representation:** `pair (pair bytes address) (pair nat (pair timestamp (option bytes)))`
+
+
+
+<a name="types-ManagedLedgerStorage"></a>
+
+---
+
+### `ManagedLedgerStorage`
+
+Managed ledger storage.
+
+**Structure:** 
+  * ***ledger*** :[`BigMap`](#types-BigMap) [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen) (***balance*** : [`Natural`](#types-Natural))    
+Ledger which map addresses to its token balance.
+  * ***approvals*** :[`BigMap`](#types-BigMap) (***owner*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen), ***spender*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)) [`Natural`](#types-Natural)    
+Map from approvals to its value.
+  * ***admin*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)    
+Addres of the admin of the token.
+  * ***paused*** :[`Bool`](#types-Bool)    
+Pause of managed ledger.
+  * ***totalSupply*** :[`Natural`](#types-Natural)    
+Total amount of tokens.
+
+**Final Michelson representation:** `pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))`
 
 
 
@@ -686,11 +734,11 @@ Unsigned number.
 Outcome storage fields.
 
 **Structure:** *one of* 
-+ **Refunded**()
++ **Refunded**(): Swap was refunded
 + **HashRevealed**
-[`ByteString`](#types-ByteString)
+[`ByteString`](#types-ByteString): Secret hash was revealed
 + **SecretRevealed**
-[`ByteString`](#types-ByteString)
+[`ByteString`](#types-ByteString): Secret was revealed
 
 
 **Final Michelson representation:** `or unit (or bytes bytes)`
@@ -706,60 +754,12 @@ Outcome storage fields.
 RevealSecretHash entrypoint params.
 
 **Structure:** 
-  * ***rshpId*** :[`SwapId`](#types-SwapId)
-  * ***rshpSecreteHash*** :[`ByteString`](#types-ByteString)
+  * ***id*** :[`SwapId`](#types-SwapId)    
+Swap id.
+  * ***secreteHash*** :[`ByteString`](#types-ByteString)    
+Hash of the secret.
 
 **Final Michelson representation:** `pair bytes bytes`
-
-
-
-<a name="types-Storage"></a>
-
----
-
-### `Storage`
-
-Managed ledger storage fields.
-
-**Structure:** 
-  * ***swaps*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Swap`](#types-Swap)
-  * ***outcomes*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Outcome`](#types-Outcome)
-
-**Final Michelson representation:** `pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes)))`
-
-
-
-<a name="types-StorageFields"></a>
-
----
-
-### `StorageFields`
-
-Managed ledger storage fields.
-
-**Structure:** 
-  * ***admin*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
-  * ***paused*** :[`Bool`](#types-Bool)
-  * ***totalSupply*** :[`Natural`](#types-Natural)
-
-**Final Michelson representation:** `pair address (pair bool nat)`
-
-
-
-<a name="types-StorageSkeleton"></a>
-
----
-
-### `StorageSkeleton`
-
-Managed ledger storage skeleton.
-
-**Structure (example):** `StorageSkeleton StorageFields` = 
-  * ***ledger*** :[`BigMap`](#types-BigMap) [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen) (***balance*** : [`Natural`](#types-Natural))
-  * ***approvals*** :[`BigMap`](#types-BigMap) (***owner*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen), ***spender*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)) [`Natural`](#types-Natural)
-  * ***fields*** :[`StorageFields`](#types-StorageFields)
-
-**Final Michelson representation (example):** `StorageSkeleton StorageFields` = `pair (big_map address nat) (pair (big_map (pair address address) nat) (pair address (pair bool nat)))`
 
 
 
@@ -769,13 +769,17 @@ Managed ledger storage skeleton.
 
 ### `Swap`
 
-Swap storage fields.
+Swap information.
 
 **Structure:** 
-  * ***sFrom*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
-  * ***sTo*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)
-  * ***sAmount*** :[`Natural`](#types-Natural)
-  * ***sReleaseTime*** :[`Timestamp`](#types-Timestamp)
+  * ***from*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)    
+Address of swap initiator.
+  * ***to*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)    
+Address of swap reciever.
+  * ***amount*** :[`Natural`](#types-Natural)    
+Number of tokens in swap.
+  * ***releaseTime*** :[`Timestamp`](#types-Timestamp)    
+Time for swap process.
 
 **Final Michelson representation:** `pair (pair address address) (pair nat timestamp)`
 
@@ -787,7 +791,7 @@ Swap storage fields.
 
 ### `SwapId`
 
-SwapId.
+Id of the swap.
 
 **Structure:** 
 [`ByteString`](#types-ByteString)

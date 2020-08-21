@@ -1,5 +1,5 @@
 module Contract.Token.Storage
-  ( Storage
+  ( ManagedLedgerStorage
   , StorageSkeleton (..)
   , LedgerValue
   , HasManagedLedgerStorage
@@ -12,15 +12,16 @@ import Indigo
 import Lorentz.Contracts.ManagedLedger.Types (LedgerValue, StorageSkeleton (..), mkStorageSkeleton)
 import Lorentz.Contracts.Spec.ApprovableLedgerInterface (GetAllowanceParams)
 import qualified Lorentz.Contracts.Spec.ApprovableLedgerInterface ()
+import Util.Named ((.!))
 
-data StorageFields = StorageFields
-  { admin       :: Address
-  , paused      :: Bool
-  , totalSupply :: Natural
+data ManagedLedgerStorage = ManagedLedgerStorage
+  { mlsLedger      :: BigMap Address LedgerValue
+  , mlsApprovals   :: BigMap GetAllowanceParams Natural
+  , mlsAdmin       :: Address
+  , mlsPaused      :: Bool
+  , mlsTotalSupply :: Natural
   } deriving stock Generic
     deriving anyclass (IsoValue, HasAnnotation)
-
-type Storage = StorageSkeleton StorageFields
 
 type HasManagedLedgerStorage s =
   ( HasField s "admin" Address
@@ -32,43 +33,44 @@ type HasManagedLedgerStorage s =
   , IsObject s
   )
 
-mkStorage :: Address -> Map Address Natural -> Storage
-mkStorage adminAddress balances = mkStorageSkeleton balances $
-  StorageFields
-  { admin = adminAddress
-  , paused = False
-  , totalSupply = sum balances
+mkStorage :: Address -> Map Address Natural -> ManagedLedgerStorage
+mkStorage adminAddress balances = ManagedLedgerStorage
+  { mlsLedger      = BigMap $ (#balance .!) <$> balances
+  , mlsApprovals   = mempty
+  , mlsAdmin       = adminAddress
+  , mlsPaused      = False
+  , mlsTotalSupply = sum balances
   }
 
-instance TypeHasDoc StorageFields where
-  typeDocMdDescription = "Managed ledger storage fields."
-  typeDocHaskellRep = homomorphicTypeDocHaskellRep
+instance TypeHasDoc ManagedLedgerStorage where
+  typeDocMdDescription = "Managed ledger storage."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "ManagedLedgerStorage", '( 'Nothing,
+         '[ '("mlsLedger", "Ledger which map addresses to its token balance.")
+          , '("mlsApprovals", "Map from approvals to its value.")
+          , '("mlsAdmin", "Addres of the admin of the token.")
+          , '("mlsPaused", "Pause of managed ledger.")
+          , '("mlsTotalSupply", "Total amount of tokens.")
+          ])
+       )
+    ]
 
-instance HasFieldOfType StorageFields name field =>
-         StoreHasField StorageFields name field where
+instance HasFieldOfType ManagedLedgerStorage name field =>
+         StoreHasField ManagedLedgerStorage name field where
   storeFieldOps = storeFieldOpsADT
 
-instance HasField Storage "ledger" (BigMap Address LedgerValue) where
-  fieldLens = fieldLensADT #ledger
+instance HasField ManagedLedgerStorage "ledger" (BigMap Address LedgerValue) where
+  fieldLens = fieldLensADT #mlsLedger
 
-instance HasField Storage "approvals" (BigMap GetAllowanceParams Natural) where
-  fieldLens = fieldLensADT #approvals
+instance HasField ManagedLedgerStorage "approvals" (BigMap GetAllowanceParams Natural) where
+  fieldLens = fieldLensADT #mlsApprovals
 
-instance HasField StorageFields "admin" Address where
-  fieldLens = fieldLensADT #admin
+instance HasField ManagedLedgerStorage "admin" Address where
+  fieldLens = fieldLensADT #mlsAdmin
 
-instance HasField StorageFields "paused" Bool where
-  fieldLens = fieldLensADT #paused
+instance HasField ManagedLedgerStorage "paused" Bool where
+  fieldLens = fieldLensADT #mlsPaused
 
-instance HasField StorageFields "totalSupply" Natural where
-  fieldLens = fieldLensADT #totalSupply
-
-instance HasField Storage "admin" Address where
-  fieldLens = fieldLensDeeper #fields
-
-instance HasField Storage "paused" Bool where
-  fieldLens = fieldLensDeeper #fields
-
-instance HasField Storage "totalSupply" Natural where
-  fieldLens = fieldLensDeeper #fields
+instance HasField ManagedLedgerStorage "totalSupply" Natural where
+  fieldLens = fieldLensADT #mlsTotalSupply
