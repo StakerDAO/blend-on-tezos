@@ -5,17 +5,14 @@ module Contract.Bridge.Impl
 
 import Indigo
 
-import qualified Indigo.Contracts.ManagedLedger as ML
-import Lorentz.Contracts.Spec.ManagedLedgerInterface (BurnParams)
-
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridgeStorage)
-import Contract.Bridge.Types (LockParams, OutcomeStatus (..))
+import Contract.Bridge.Types (LockParams, OutcomeStatus (..), RevealSecretHashParams)
 import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
 
 data Parameter
-  = Burnq BurnParams
-  | Lock  LockParams
+  = Lock LockParams
+  | RevealSecretHash RevealSecretHashParams
   deriving stock Generic
   deriving anyclass IsoValue
 
@@ -32,8 +29,8 @@ entrypoints
   => IndigoEntrypoint param
 entrypoints param = do
   entryCaseSimple param
-    ( #cBurnq //-> ML.burn @storage
-    , #cLock  //-> lock @storage
+    ( #cLock  //-> lock @storage
+    , #cRevealSecretHash //-> revealSecretHash @storage
     )
 
 lock
@@ -52,13 +49,39 @@ lock parameter = do
 
   outcomes <- getStorageField @s #outcomes
   setStorageField @s #swaps $ swaps +: (swapId, construct
-                                                      ( sender
-                                                      , parameter #! #lpTo
-                                                      , parameter #! #lpAmount
-                                                      , parameter #! #lpReleaseTime
-                                                      ))
-  whenSome (parameter #! #lpSecretHash) $ \hash -> setStorageField @s #outcomes $ outcomes +: (swapId, construct (constExpr HashRevealed, some (varExpr hash), constExpr Nothing))
-  pure ()
+    ( sender
+    , parameter #! #lpTo
+    , parameter #! #lpAmount
+    , parameter #! #lpReleaseTime
+    ))
+
+  whenSome (parameter #! #lpSecretHash) $ \hash ->
+    setStorageField @s #outcomes $ outcomes +: (swapId, construct
+      ( constExpr HashRevealed, some (varExpr hash)
+      , constExpr Nothing
+      ))
+
+revealSecretHash
+  :: forall s sp.
+       ( sp :~> RevealSecretHashParams
+       , HasBridgeStorage s
+       )
+    => IndigoEntrypoint sp
+revealSecretHash parameter = do
+  swaps <- getStorageField @s #swaps
+  swapId <- new$ parameter #! #rshpId
+
+  ifNone (swaps #: swapId)
+    (void $ failCustom #swapLockDoesNotExists swapId) $
+    \s -> when (sender /= (s #! #sFrom)) $ failCustom_ #senderIsNotTheInitiator
+
+  outcomes <- getStorageField @s #outcomes
+  whenSome (outcomes #: swapId) $ \_ -> failCustom #secreteHashIsAlreadySet swapId
+
+  setStorageField @s #outcomes $ outcomes +: (swapId, construct
+    ( constExpr HashRevealed
+    , some (parameter #! #rshpSecreteHash), constExpr Nothing
+    ))
 
 ----------------------------------------------------------------------------
 --  Helpers

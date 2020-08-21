@@ -22,8 +22,8 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [getAdministrator](#entrypoints-getAdministrator)
   - [mint](#entrypoints-mint)
   - [burn](#entrypoints-burn)
-  - [burnq](#entrypoints-burnq)
   - [lock](#entrypoints-lock)
+  - [revealSecretHash](#entrypoints-revealSecretHash)
 
 **[Definitions](#definitions)**
 
@@ -43,6 +43,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [Natural](#types-Natural)
   - [Outcome](#types-Outcome)
   - [OutcomeStatus](#types-OutcomeStatus)
+  - [RevealSecretHashParams](#types-RevealSecretHashParams)
   - [Storage](#types-Storage)
   - [StorageFields](#types-StorageFields)
   - [StorageSkeleton](#types-StorageSkeleton)
@@ -56,8 +57,11 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [InternalError](#errors-InternalError)
   - [NotEnoughAllowance](#errors-NotEnoughAllowance)
   - [NotEnoughBalance](#errors-NotEnoughBalance)
+  - [SecreteHashIsAlreadySet](#errors-SecreteHashIsAlreadySet)
   - [SenderIsNotAdmin](#errors-SenderIsNotAdmin)
+  - [SenderIsNotTheInitiator](#errors-SenderIsNotTheInitiator)
   - [SwapLockAlreadyExists](#errors-SwapLockAlreadyExists)
+  - [SwapLockDoesNotExists](#errors-SwapLockDoesNotExists)
   - [TokenOperationsArePaused](#errors-TokenOperationsArePaused)
   - [UnsafeAllowanceChange](#errors-UnsafeAllowanceChange)
 
@@ -441,38 +445,6 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
-<a name="entrypoints-burnq"></a>
-
----
-
-### `burnq`
-
-Destroys the given amount of tokens on the account associated with the given address.
-
-**Argument:** 
-  + **In Haskell:** (***from*** : [`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen), ***value*** : [`Natural`](#types-Natural))
-  + **In Michelson:** `(pair (address :from) (nat :value))`
-    + **Example:** <span id="example-id">`Pair "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB" 0`</span>
-
-<details>
-  <summary><b>How to call this entrypoint</b></summary>
-
-0. Construct an argument for the entrypoint.
-1. Call contract's `burnq` entrypoint passing the constructed argument.
-</details>
-<p>
-
-
-
-**Authorization:** The sender has to be `administrator`.
-
-**Possible errors:**
-* [`SenderIsNotAdmin`](#errors-SenderIsNotAdmin) — Entrypoint executed not by its administrator.
-
-* [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
-
-
-
 <a name="entrypoints-lock"></a>
 
 ---
@@ -498,6 +470,36 @@ Destroys the given amount of tokens on the account associated with the given add
 * [`SwapLockAlreadyExists`](#errors-SwapLockAlreadyExists) — Lock with this id already exists
 
 * [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
+
+
+
+<a name="entrypoints-revealSecretHash"></a>
+
+---
+
+### `revealSecretHash`
+
+**Argument:** 
+  + **In Haskell:** [`RevealSecretHashParams`](#types-RevealSecretHashParams)
+  + **In Michelson:** `(pair (bytes %rshpId) (bytes %rshpSecreteHash))`
+    + **Example:** <span id="example-id">`Pair 0x0a 0x0a`</span>
+
+<details>
+  <summary><b>How to call this entrypoint</b></summary>
+
+0. Construct an argument for the entrypoint.
+1. Call contract's `revealSecretHash` entrypoint passing the constructed argument.
+</details>
+<p>
+
+
+
+**Possible errors:**
+* [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
+
+* [`SenderIsNotTheInitiator`](#errors-SenderIsNotTheInitiator) — Sender is not the initiator of this swap
+
+* [`SecreteHashIsAlreadySet`](#errors-SecreteHashIsAlreadySet) — Secrete hash is already set for swap with certain id
 
 
 
@@ -625,7 +627,7 @@ Signed number.
 
 ### `LockParams`
 
-Outcome storage fields.
+Lock entrypoint params.
 
 **Structure:** 
   * ***lpId*** :[`SwapId`](#types-SwapId)
@@ -708,6 +710,22 @@ OutcomeStatus.
 
 
 **Final Michelson representation:** `or unit (or unit unit)`
+
+
+
+<a name="types-RevealSecretHashParams"></a>
+
+---
+
+### `RevealSecretHashParams`
+
+RevealSecretHash entrypoint params.
+
+**Structure:** 
+  * ***rshpId*** :[`SwapId`](#types-SwapId)
+  * ***rshpSecreteHash*** :[`ByteString`](#types-ByteString)
+
+**Final Michelson representation:** `pair bytes bytes`
 
 
 
@@ -934,6 +952,20 @@ Provided error argument will be of type (***required*** : [`Natural`](#types-Nat
 
 Provided error argument will be of type (***required*** : [`Natural`](#types-Natural), ***present*** : [`Natural`](#types-Natural)).
 
+<a name="errors-SecreteHashIsAlreadySet"></a>
+
+---
+
+### `SecreteHashIsAlreadySet`
+
+**Class:** Action exception
+
+**Fires if:** Secrete hash is already set for swap with certain id
+
+**Representation:** `("SecreteHashIsAlreadySet", <error argument>)`.
+
+Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
+
 <a name="errors-SenderIsNotAdmin"></a>
 
 ---
@@ -946,6 +978,18 @@ Provided error argument will be of type (***required*** : [`Natural`](#types-Nat
 
 **Representation:** `("SenderIsNotAdmin", ())`.
 
+<a name="errors-SenderIsNotTheInitiator"></a>
+
+---
+
+### `SenderIsNotTheInitiator`
+
+**Class:** Action exception
+
+**Fires if:** Sender is not the initiator of this swap
+
+**Representation:** `("SenderIsNotTheInitiator", ())`.
+
 <a name="errors-SwapLockAlreadyExists"></a>
 
 ---
@@ -957,6 +1001,20 @@ Provided error argument will be of type (***required*** : [`Natural`](#types-Nat
 **Fires if:** Lock with this id already exists
 
 **Representation:** `("SwapLockAlreadyExists", <error argument>)`.
+
+Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
+
+<a name="errors-SwapLockDoesNotExists"></a>
+
+---
+
+### `SwapLockDoesNotExists`
+
+**Class:** Action exception
+
+**Fires if:** Lock with this id does not exists
+
+**Representation:** `("SwapLockDoesNotExists", <error argument>)`.
 
 Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
 
