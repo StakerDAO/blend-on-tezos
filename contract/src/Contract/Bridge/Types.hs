@@ -4,6 +4,8 @@ module Contract.Bridge.Types
   , Swap (..)
   , Outcome (..)
   , RevealSecretHashParams (..)
+  , RedeemParams (..)
+  , TooLongSecretError (..)
   ) where
 
 import Indigo
@@ -38,7 +40,7 @@ instance TypeHasDoc Swap where
     ]
 
 data Outcome
-  = Refunded
+  = Refunded ()
   | HashRevealed ByteString
   | SecretRevealed ByteString
   deriving stock Generic
@@ -66,7 +68,7 @@ instance TypeHasDoc LockParams where
   typeDocMdDescription = "Lock entrypoint params."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
-   '[ '( "LockParams", '( 'Just "Swap was refunded", 
+   '[ '( "LockParams", '( 'Nothing,
          '[ '("lpId", "Swap id.")
           , '("lpTo", "Address of swap reciever.")
           , '("lpAmount", "Number of tokens in swap.")
@@ -86,9 +88,43 @@ instance TypeHasDoc RevealSecretHashParams where
   typeDocMdDescription = "RevealSecretHash entrypoint params."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
-   '[ '( "RevealSecretHashParams", '( 'Just "Swap was refunded", 
+   '[ '( "RevealSecretHashParams", '( 'Nothing,
          '[ '("rshpId", "Swap id.")
           , '("rshpSecreteHash", "Hash of the secret.")
+          ])
+       )
+    ]
+
+data RedeemParams = RedeemParams
+  { rpId     :: SwapId
+  , rpSecret :: ByteString
+  } deriving stock Generic
+    deriving anyclass (IsoValue, HasAnnotation)
+
+instance TypeHasDoc RedeemParams where
+  typeDocMdDescription = "RevealSecretHash entrypoint params."
+  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "RedeemParams", '( 'Nothing,
+         '[ '("rpId", "Swap id.")
+          , '("rpSecret", "Secret.")
+          ])
+       )
+    ]
+    
+data TooLongSecretError = TooLongSecretError
+ { tlseExpected :: Natural
+ , tlseActual :: Natural
+ } deriving stock Generic
+   deriving anyclass (IsoValue, HasAnnotation)
+   
+instance TypeHasDoc TooLongSecretError where
+  typeDocMdDescription = "Data for too long secter error."
+  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "TooLongSecretError", '( 'Nothing,
+         '[ '("tlseExpected", "Expected lenght limit of the secrete.")
+          , '("tlseActual", "Actual lenght of the secrete.")
           ])
        )
     ]

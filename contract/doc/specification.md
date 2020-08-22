@@ -24,6 +24,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [burn](#entrypoints-burn)
   - [lock](#entrypoints-lock)
   - [revealSecretHash](#entrypoints-revealSecretHash)
+  - [redeem](#entrypoints-redeem)
 
 **[Definitions](#definitions)**
 
@@ -44,11 +45,13 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [Named entry](#types-Named-entry)
   - [Natural](#types-Natural)
   - [Outcome](#types-Outcome)
+  - [RedeemParams](#types-RedeemParams)
   - [RevealSecretHashParams](#types-RevealSecretHashParams)
   - [Swap](#types-Swap)
   - [SwapId](#types-SwapId)
   - [Text](#types-Text)
   - [Timestamp](#types-Timestamp)
+  - [TooLongSecretError](#types-TooLongSecretError)
   - [View](#types-View)
 - [Errors](#errors)
   - [AllowanceMismatch](#errors-AllowanceMismatch)
@@ -58,10 +61,13 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [SecreteHashIsAlreadySet](#errors-SecreteHashIsAlreadySet)
   - [SenderIsNotAdmin](#errors-SenderIsNotAdmin)
   - [SenderIsNotTheInitiator](#errors-SenderIsNotTheInitiator)
+  - [SwapIsOver](#errors-SwapIsOver)
   - [SwapLockAlreadyExists](#errors-SwapLockAlreadyExists)
   - [SwapLockDoesNotExists](#errors-SwapLockDoesNotExists)
   - [TokenOperationsArePaused](#errors-TokenOperationsArePaused)
+  - [TooLongSecrete](#errors-TooLongSecrete)
   - [UnsafeAllowanceChange](#errors-UnsafeAllowanceChange)
+  - [WrongOutcomeStatus](#errors-WrongOutcomeStatus)
 
 
 
@@ -503,6 +509,38 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+<a name="entrypoints-redeem"></a>
+
+---
+
+### `redeem`
+
+**Argument:** 
+  + **In Haskell:** [`RedeemParams`](#types-RedeemParams)
+  + **In Michelson:** `(pair (bytes %rpId) (bytes %rpSecret))`
+    + **Example:** <span id="example-id">`Pair 0x0a 0x0a`</span>
+
+<details>
+  <summary><b>How to call this entrypoint</b></summary>
+
+0. Construct an argument for the entrypoint.
+1. Call contract's `redeem` entrypoint passing the constructed argument.
+</details>
+<p>
+
+
+
+**Possible errors:**
+* [`TooLongSecrete`](#errors-TooLongSecrete) — Secret length in longer then its limit
+
+* [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
+
+* [`WrongOutcomeStatus`](#errors-WrongOutcomeStatus) — Not valid outcome status
+
+* [`SwapIsOver`](#errors-SwapIsOver) — Swap time is over
+
+
+
 
 
 
@@ -734,7 +772,8 @@ Unsigned number.
 Outcome storage fields.
 
 **Structure:** *one of* 
-+ **Refunded**(): Swap was refunded
++ **Refunded**
+[`()`](#types-lparenrparen): Swap was refunded
 + **HashRevealed**
 [`ByteString`](#types-ByteString): Secret hash was revealed
 + **SecretRevealed**
@@ -742,6 +781,24 @@ Outcome storage fields.
 
 
 **Final Michelson representation:** `or unit (or bytes bytes)`
+
+
+
+<a name="types-RedeemParams"></a>
+
+---
+
+### `RedeemParams`
+
+RevealSecretHash entrypoint params.
+
+**Structure:** 
+  * ***id*** :[`SwapId`](#types-SwapId)    
+Swap id.
+  * ***secret*** :[`ByteString`](#types-ByteString)    
+Secret.
+
+**Final Michelson representation:** `pair bytes bytes`
 
 
 
@@ -823,6 +880,24 @@ This has to contain only ASCII characters with codes from [32; 126] range; addit
 Timestamp primitive.
 
 **Final Michelson representation:** `timestamp`
+
+
+
+<a name="types-TooLongSecretError"></a>
+
+---
+
+### `TooLongSecretError`
+
+Data for too long secter error.
+
+**Structure:** 
+  * ***expected*** :[`Natural`](#types-Natural)    
+Expected lenght limit of the secrete.
+  * ***actual*** :[`Natural`](#types-Natural)    
+Actual lenght of the secrete.
+
+**Final Michelson representation:** `pair nat nat`
 
 
 
@@ -978,6 +1053,20 @@ Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for 
 
 **Representation:** `("SenderIsNotTheInitiator", ())`.
 
+<a name="errors-SwapIsOver"></a>
+
+---
+
+### `SwapIsOver`
+
+**Class:** Action exception
+
+**Fires if:** Swap time is over
+
+**Representation:** `("SwapIsOver", <error argument>)`.
+
+Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stand for timestamp.
+
 <a name="errors-SwapLockAlreadyExists"></a>
 
 ---
@@ -1018,6 +1107,20 @@ Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for 
 
 **Representation:** `("TokenOperationsArePaused", ())`.
 
+<a name="errors-TooLongSecrete"></a>
+
+---
+
+### `TooLongSecrete`
+
+**Class:** Action exception
+
+**Fires if:** Secret length in longer then its limit
+
+**Representation:** `("TooLongSecrete", <error argument>)`.
+
+Provided error argument will be of type [`TooLongSecretError`](#types-TooLongSecretError) and stand for actual and expected length.
+
 <a name="errors-UnsafeAllowanceChange"></a>
 
 ---
@@ -1031,3 +1134,17 @@ Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for 
 **Representation:** `("UnsafeAllowanceChange", <error argument>)`.
 
 Provided error argument will be of type [`Natural`](#types-Natural) and stand for the previous value of approval.
+
+<a name="errors-WrongOutcomeStatus"></a>
+
+---
+
+### `WrongOutcomeStatus`
+
+**Class:** Action exception
+
+**Fires if:** Not valid outcome status
+
+**Representation:** `("WrongOutcomeStatus", <error argument>)`.
+
+Provided error argument will be of type [`Text`](#types-Text) and stand for outcome status.

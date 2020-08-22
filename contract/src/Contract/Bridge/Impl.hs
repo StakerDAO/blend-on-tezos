@@ -7,12 +7,13 @@ import Indigo
 
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridge)
-import Contract.Bridge.Types (LockParams, RevealSecretHashParams)
+import Contract.Bridge.Types (LockParams, RevealSecretHashParams, RedeemParams)
 import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
 
 data Parameter
   = Lock LockParams
   | RevealSecretHash RevealSecretHashParams
+  | Redeem RedeemParams
   deriving stock Generic
   deriving anyclass IsoValue
 
@@ -31,6 +32,7 @@ entrypoints param = do
   entryCaseSimple param
     ( #cLock  //-> lock @storage
     , #cRevealSecretHash //-> revealSecretHash @storage
+    , #cRedeem //-> redeem @storage
     )
 
 lock
@@ -60,10 +62,10 @@ lock parameter = do
 
 revealSecretHash
   :: forall s sp.
-       ( sp :~> RevealSecretHashParams
-       , HasBridge s
-       )
-    => IndigoEntrypoint sp
+     ( sp :~> RevealSecretHashParams
+     , HasBridge s
+     )
+  => IndigoEntrypoint sp
 revealSecretHash parameter = do
   swaps <- getStorageField @s #swaps
   swapId <- new$ parameter #! #rshpId
@@ -77,6 +79,43 @@ revealSecretHash parameter = do
 
   setStorageField @s #outcomes $ outcomes +:
     (swapId, wrap #cHashRevealed $ parameter #! #rshpSecreteHash)
+
+redeem
+  :: forall s sp.
+     ( sp :~> RedeemParams
+     , HasBridge s
+     , HasManagedLedgerStorage s
+     )
+  => IndigoEntrypoint sp
+redeem parameter = do
+  swapId <- new$ parameter #! #rpId
+
+  secret <- new$ parameter #! #rpSecret
+  maxSecretLength <- new$ 32 nat -- TODO now const but maybe make it configurable
+  when (size secret <= maxSecretLength) $
+    failCustom #tooLongSecrete $ construct (varExpr maxSecretLength, size secret)
+
+  outcomes <- getStorageField @s #outcomes
+  ifSome (outcomes #: swapId)
+    (\o -> case_ o
+      ( #cRefunded //-> 
+          \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
+      , #cHashRevealed //-> 
+          \_ -> setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cSecretRevealed secret)
+      , #cSecretRevealed //-> 
+          \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
+      )
+    )
+    (void $ failCustom #swapLockDoesNotExists swapId)
+  
+  swaps <- getStorageField @s #swaps
+  
+  ifSome (swaps #: swapId)
+    (\s -> do
+       when (now > s #! #sReleaseTime) $ failCustom #swapIsOver $ s #! #sReleaseTime
+       creditTo @s (s #! #sTo) (s #! #sAmount)
+    )
+    (void $ failCustom #swapLockDoesNotExists swapId)
 
 ----------------------------------------------------------------------------
 --  Helpers
@@ -107,6 +146,23 @@ debitFrom from val = do
       failNotEnoughBalance curBalance = failCustom @r #notEnoughBalance $ pair
         (val !~ #required)
         (curBalance !~ #present)
+        
+-- | Credit the given amount of tokens to a given address in ledger.
+creditTo
+  :: forall s to value.
+     ( to :~> Address, value :~> Natural
+     , HasManagedLedgerStorage s
+     )
+  => to -> value -> IndigoProcedure
+creditTo to value = do
+  ledger_ <- getStorageField @s #ledger
+
+  when (value /= 0 nat) do
+    newBalance <- ifSome (ledger_ #: to)
+      (\ledgerValue -> return $ (value + ledgerValue #~ #balance) !~ #balance)
+      (return $ value !~ #balance)
+
+    setStorageField @s #ledger $ ledger_ +: (to, newBalance)
 
 -- | Ensure that given 'LedgerValue' value cannot be safely removed
 -- and return it.
