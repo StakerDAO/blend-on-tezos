@@ -6,7 +6,7 @@ module Contract.Bridge.Storage
 
 import Indigo
 
-import Contract.Bridge.Types (SwapId, Swap, Outcome)
+import Contract.Bridge.Types (Outcome, Swap, SwapId)
 
 data BridgeStorage = BridgeStorage
   { sSwaps    :: BigMap SwapId Swap

@@ -22,15 +22,16 @@ parameter (or (or (or (or (pair %transfer (address :from)
                                           (nat :value))
                               (pair %burn (address :from)
                                           (nat :value))))))
-              (or (pair %lock (pair (bytes %lpId)
-                                    (address %lpTo))
-                              (pair (nat %lpAmount)
-                                    (pair (timestamp %lpReleaseTime)
-                                          (option %lpSecretHash bytes))))
-                  (or (pair %revealSecretHash (bytes %rshpId)
-                                              (bytes %rshpSecreteHash))
-                      (pair %redeem (bytes %rpId)
-                                    (bytes %rpSecret)))));
+              (or (or (pair %lock (pair (bytes %lpId)
+                                        (address %lpTo))
+                                  (pair (nat %lpAmount)
+                                        (pair (timestamp %lpReleaseTime)
+                                              (option %lpSecretHash bytes))))
+                      (pair %revealSecretHash (bytes %rshpId)
+                                              (bytes %rshpSecreteHash)))
+                  (or (pair %redeem (bytes %rpId)
+                                    (bytes %rpSecret))
+                      (bytes %claimRefund))));
 storage (pair (pair %sToken (pair (big_map %mlsLedger address
                                                       (nat :balance))
                                   (big_map %mlsApprovals (pair (address :owner)
@@ -48,7 +49,7 @@ storage (pair (pair %sToken (pair (big_map %mlsLedger address
                                                  (or (unit %refunded)
                                                      (or (bytes %hashRevealed)
                                                          (bytes %secretRevealed))))));
-code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair address nat)) (or (pair address (pair nat nat)) (or (pair (pair address address) (contract nat)) (pair address (contract nat))))) (or (or (pair unit (contract nat)) (or bool address)) (or (pair unit (contract address)) (or (pair address nat) (pair address nat))))) (or (pair (pair bytes address) (pair nat (pair timestamp (option bytes)))) (or (pair bytes bytes) (pair bytes bytes)))) (pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))));
+code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair address nat)) (or (pair address (pair nat nat)) (or (pair (pair address address) (contract nat)) (pair address (contract nat))))) (or (or (pair unit (contract nat)) (or bool address)) (or (pair unit (contract address)) (or (pair address nat) (pair address nat))))) (or (or (pair (pair bytes address) (pair nat (pair timestamp (option bytes)))) (pair bytes bytes)) (or (pair bytes bytes) bytes))) (pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))));
        NIL operation;
        SWAP;
        DUP;
@@ -737,141 +738,141 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                          DROP } } } };
                  DROP }
                { DUP;
-                 IF_LEFT { DIP 8
-                               { DUP };
-                           DIG 8;
-                           DIP { DUP };
-                           SWAP;
-                           CAR;
-                           CAR;
-                           DIP { DUP };
-                           SWAP;
-                           DIP { DUP };
-                           SWAP;
-                           GET;
-                           IF_NONE {  }
-                                   { DIP { DUP };
+                 IF_LEFT { IF_LEFT { DIP 8
+                                         { DUP };
+                                     DIG 8;
+                                     DIP { DUP };
                                      SWAP;
-                                     PUSH string "SwapLockAlreadyExists";
-                                     PAIR;
-                                     FAILWITH };
-                           DIP 5
-                               { DUP };
-                           DIG 5;
-                           DUP;
-                           SENDER;
-                           GET;
-                           IF_NONE { PUSH nat 0;
-                                     DIP 4
-                                         { DUP };
-                                     DIG 4;
-                                     CDR;
                                      CAR;
-                                     PAIR;
-                                     PUSH string "NotEnoughBalance";
-                                     PAIR;
-                                     FAILWITH }
-                                   { DUP;
-                                     DIP 5
-                                         { DUP };
-                                     DIG 5;
-                                     CDR;
                                      CAR;
                                      DIP { DUP };
                                      SWAP;
-                                     SUB;
-                                     ISNAT;
-                                     IF_NONE { DUP;
-                                               DIP 6
+                                     DIP { DUP };
+                                     SWAP;
+                                     GET;
+                                     IF_NONE {  }
+                                             { DIP { DUP };
+                                               SWAP;
+                                               PUSH string "SwapLockAlreadyExists";
+                                               PAIR;
+                                               FAILWITH };
+                                     DIP 5
+                                         { DUP };
+                                     DIG 5;
+                                     DUP;
+                                     SENDER;
+                                     GET;
+                                     IF_NONE { PUSH nat 0;
+                                               DIP 4
                                                    { DUP };
-                                               DIG 6;
+                                               DIG 4;
                                                CDR;
                                                CAR;
                                                PAIR;
                                                PUSH string "NotEnoughBalance";
                                                PAIR;
                                                FAILWITH }
-                                             {  };
-                                     DUP;
-                                     PUSH nat 0;
-                                     SWAP;
-                                     COMPARE;
-                                     EQ;
-                                     IF { NONE nat }
-                                        { DUP;
-                                          SOME };
-                                     DIP 4
+                                             { DUP;
+                                               DIP 5
+                                                   { DUP };
+                                               DIG 5;
+                                               CDR;
+                                               CAR;
+                                               DIP { DUP };
+                                               SWAP;
+                                               SUB;
+                                               ISNAT;
+                                               IF_NONE { DUP;
+                                                         DIP 6
+                                                             { DUP };
+                                                         DIG 6;
+                                                         CDR;
+                                                         CAR;
+                                                         PAIR;
+                                                         PUSH string "NotEnoughBalance";
+                                                         PAIR;
+                                                         FAILWITH }
+                                                       {  };
+                                               DUP;
+                                               PUSH nat 0;
+                                               SWAP;
+                                               COMPARE;
+                                               EQ;
+                                               IF { NONE nat }
+                                                  { DUP;
+                                                    SOME };
+                                               DIP 4
+                                                   { DUP };
+                                               DIG 4;
+                                               DIP { DUP };
+                                               SWAP;
+                                               SENDER;
+                                               UPDATE;
+                                               DIP 11
+                                                   { DROP };
+                                               DUG 10;
+                                               DROP 2;
+                                               DROP 2 };
+                                     DIP 12
                                          { DUP };
-                                     DIG 4;
-                                     DIP { DUP };
-                                     SWAP;
-                                     SENDER;
-                                     UPDATE;
-                                     DIP 11
-                                         { DROP };
-                                     DUG 10;
-                                     DROP 2;
-                                     DROP 2 };
-                           DIP 12
-                               { DUP };
-                           DIG 12;
-                           DIP 3
-                               { DUP };
-                           DIG 3;
-                           DIP 5
-                               { DUP };
-                           DIG 5;
-                           CAR;
-                           CDR;
-                           SENDER;
-                           PAIR;
-                           DIP { DIP 5
-                                     { DUP };
-                                 DIG 5;
-                                 CDR;
-                                 CAR;
-                                 DIP { DIP 5
-                                           { DUP };
-                                       DIG 5;
-                                       CDR;
-                                       CDR;
-                                       CAR };
-                                 PAIR };
-                           PAIR;
-                           SOME;
-                           DIP 4
-                               { DUP };
-                           DIG 4;
-                           UPDATE;
-                           DIP 13
-                               { DROP };
-                           DUG 12;
-                           DIP 4
-                               { DUP };
-                           DIG 4;
-                           CDR;
-                           CDR;
-                           CDR;
-                           IF_NONE {  }
-                                   { DIP { DUP };
-                                     SWAP;
-                                     DIP { DUP };
-                                     SWAP;
-                                     LEFT bytes;
-                                     RIGHT unit;
-                                     SOME;
+                                     DIG 12;
+                                     DIP 3
+                                         { DUP };
+                                     DIG 3;
                                      DIP 5
                                          { DUP };
                                      DIG 5;
+                                     CAR;
+                                     CDR;
+                                     SENDER;
+                                     PAIR;
+                                     DIP { DIP 5
+                                               { DUP };
+                                           DIG 5;
+                                           CDR;
+                                           CAR;
+                                           DIP { DIP 5
+                                                     { DUP };
+                                                 DIG 5;
+                                                 CDR;
+                                                 CDR;
+                                                 CAR };
+                                           PAIR };
+                                     PAIR;
+                                     SOME;
+                                     DIP 4
+                                         { DUP };
+                                     DIG 4;
                                      UPDATE;
-                                     DIP 15
+                                     DIP 13
                                          { DROP };
-                                     DUG 14;
-                                     DROP };
-                           DROP 2;
-                           DROP 2;
-                           DROP }
-                         { IF_LEFT { DIP 8
+                                     DUG 12;
+                                     DIP 4
+                                         { DUP };
+                                     DIG 4;
+                                     CDR;
+                                     CDR;
+                                     CDR;
+                                     IF_NONE {  }
+                                             { DIP { DUP };
+                                               SWAP;
+                                               DIP { DUP };
+                                               SWAP;
+                                               LEFT bytes;
+                                               RIGHT unit;
+                                               SOME;
+                                               DIP 5
+                                                   { DUP };
+                                               DIG 5;
+                                               UPDATE;
+                                               DIP 15
+                                                   { DROP };
+                                               DUG 14;
+                                               DROP };
+                                     DROP 2;
+                                     DROP 2;
+                                     DROP }
+                                   { DIP 8
                                          { DUP };
                                      DIG 8;
                                      DIP { DUP };
@@ -929,8 +930,8 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                          { DROP };
                                      DUG 12;
                                      DROP 2;
-                                     DROP 2 }
-                                   { DUP;
+                                     DROP 2 } }
+                         { IF_LEFT { DUP;
                                      CAR;
                                      DIP { DUP };
                                      SWAP;
@@ -1012,7 +1013,7 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                CDR;
                                                NOW;
                                                COMPARE;
-                                               GT;
+                                               GE;
                                                IF { DUP;
                                                     CDR;
                                                     CDR;
@@ -1069,6 +1070,116 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                   {  };
                                                DROP 2 };
                                      DROP 2;
+                                     DROP 2;
+                                     DROP 2 }
+                                   { DUP;
+                                     DIP 10
+                                         { DUP };
+                                     DIG 10;
+                                     DUP;
+                                     DIP 2
+                                         { DUP };
+                                     DIG 2;
+                                     GET;
+                                     IF_NONE {  }
+                                             { DUP;
+                                               IF_LEFT { PUSH string "Refunded";
+                                                         PUSH string "WrongOutcomeStatus";
+                                                         PAIR;
+                                                         FAILWITH }
+                                                       { IF_LEFT { DROP }
+                                                                 { PUSH string "SecretRevealed";
+                                                                   PUSH string "WrongOutcomeStatus";
+                                                                   PAIR;
+                                                                   FAILWITH } };
+                                               DROP };
+                                     DIP 10
+                                         { DUP };
+                                     DIG 10;
+                                     DUP;
+                                     DIP 3
+                                         { DUP };
+                                     DIG 3;
+                                     GET;
+                                     IF_NONE { DIP 2
+                                                   { DUP };
+                                               DIG 2;
+                                               PUSH string "SwapLockDoesNotExists";
+                                               PAIR;
+                                               FAILWITH }
+                                             { DUP;
+                                               CDR;
+                                               CDR;
+                                               NOW;
+                                               COMPARE;
+                                               LT;
+                                               IF { DUP;
+                                                    CDR;
+                                                    CDR;
+                                                    PUSH string "FundsLock";
+                                                    PAIR;
+                                                    FAILWITH }
+                                                  {  };
+                                               DIP 2
+                                                   { DUP };
+                                               DIG 2;
+                                               PUSH (or unit (or bytes bytes)) (Left Unit);
+                                               SOME;
+                                               DIP 5
+                                                   { DUP };
+                                               DIG 5;
+                                               UPDATE;
+                                               DIP 14
+                                                   { DROP };
+                                               DUG 13;
+                                               DIP 7
+                                                   { DUP };
+                                               DIG 7;
+                                               PUSH nat 0;
+                                               DIP 2
+                                                   { DUP };
+                                               DIG 2;
+                                               CDR;
+                                               CAR;
+                                               COMPARE;
+                                               NEQ;
+                                               IF { DUP;
+                                                    DIP 2
+                                                        { DUP };
+                                                    DIG 2;
+                                                    CAR;
+                                                    CAR;
+                                                    GET;
+                                                    IF_NONE { DIP { DUP };
+                                                              SWAP;
+                                                              CDR;
+                                                              CAR }
+                                                            { DUP;
+                                                              DIP 3
+                                                                  { DUP };
+                                                              DIG 3;
+                                                              CDR;
+                                                              CAR;
+                                                              ADD;
+                                                              SWAP;
+                                                              DROP };
+                                                    DIP { DUP };
+                                                    SWAP;
+                                                    DIP { DUP };
+                                                    SWAP;
+                                                    SOME;
+                                                    DIP 4
+                                                        { DUP };
+                                                    DIG 4;
+                                                    CAR;
+                                                    CAR;
+                                                    UPDATE;
+                                                    DIP 10
+                                                        { DROP };
+                                                    DUG 9;
+                                                    DROP }
+                                                  {  };
+                                               DROP 2 };
                                      DROP 2;
                                      DROP 2 } };
                  DROP };

@@ -25,6 +25,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [lock](#entrypoints-lock)
   - [revealSecretHash](#entrypoints-revealSecretHash)
   - [redeem](#entrypoints-redeem)
+  - [claimRefund](#entrypoints-claimRefund)
 
 **[Definitions](#definitions)**
 
@@ -37,6 +38,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [Bool](#types-Bool)
   - [BridgeStorage](#types-BridgeStorage)
   - [ByteString](#types-ByteString)
+  - [ClaimRefundParams](#types-ClaimRefundParams)
   - [Contract](#types-Contract)
   - [Integer](#types-Integer)
   - [LockParams](#types-LockParams)
@@ -55,6 +57,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [View](#types-View)
 - [Errors](#errors)
   - [AllowanceMismatch](#errors-AllowanceMismatch)
+  - [FundsLock](#errors-FundsLock)
   - [InternalError](#errors-InternalError)
   - [NotEnoughAllowance](#errors-NotEnoughAllowance)
   - [NotEnoughBalance](#errors-NotEnoughBalance)
@@ -541,6 +544,36 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+<a name="entrypoints-claimRefund"></a>
+
+---
+
+### `claimRefund`
+
+**Argument:** 
+  + **In Haskell:** [`ClaimRefundParams`](#types-ClaimRefundParams)
+  + **In Michelson:** `bytes`
+    + **Example:** <span id="example-id">`0x0a`</span>
+
+<details>
+  <summary><b>How to call this entrypoint</b></summary>
+
+0. Construct an argument for the entrypoint.
+1. Call contract's `claimRefund` entrypoint passing the constructed argument.
+</details>
+<p>
+
+
+
+**Possible errors:**
+* [`WrongOutcomeStatus`](#errors-WrongOutcomeStatus) — Not valid outcome status
+
+* [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
+
+* [`FundsLock`](#errors-FundsLock) — Funds are still lock
+
+
+
 
 
 
@@ -648,6 +681,21 @@ Container with results of each swap.
 ### `ByteString`
 
 Bytes primitive.
+
+**Final Michelson representation:** `bytes`
+
+
+
+<a name="types-ClaimRefundParams"></a>
+
+---
+
+### `ClaimRefundParams`
+
+ClaimRefund params.
+
+**Structure:** 
+[`SwapId`](#types-SwapId)
 
 **Final Michelson representation:** `bytes`
 
@@ -974,6 +1022,20 @@ We distinquish several error classes:
 **Representation:** `("AllowanceMismatch", <error argument>)`.
 
 Provided error argument will be of type (***actual*** : [`Natural`](#types-Natural), ***expected*** : [`Natural`](#types-Natural)) and stand for `(actual allowance, expected allowance)` pair.
+
+<a name="errors-FundsLock"></a>
+
+---
+
+### `FundsLock`
+
+**Class:** Action exception
+
+**Fires if:** Funds are still lock
+
+**Representation:** `("FundsLock", <error argument>)`.
+
+Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stand for timestamp.
 
 <a name="errors-InternalError"></a>
 

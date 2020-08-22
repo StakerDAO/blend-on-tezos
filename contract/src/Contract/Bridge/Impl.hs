@@ -7,13 +7,15 @@ import Indigo
 
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridge)
-import Contract.Bridge.Types (LockParams, RevealSecretHashParams, RedeemParams)
+import Contract.Bridge.Types (ClaimRefundParams, LockParams, Outcome (..), RedeemParams,
+                              RevealSecretHashParams)
 import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
 
 data Parameter
   = Lock LockParams
   | RevealSecretHash RevealSecretHashParams
   | Redeem RedeemParams
+  | ClaimRefund ClaimRefundParams
   deriving stock Generic
   deriving anyclass IsoValue
 
@@ -33,6 +35,7 @@ entrypoints param = do
     ( #cLock  //-> lock @storage
     , #cRevealSecretHash //-> revealSecretHash @storage
     , #cRedeem //-> redeem @storage
+    , #cClaimRefund //-> claimRefund @storage
     )
 
 lock
@@ -98,24 +101,55 @@ redeem parameter = do
   outcomes <- getStorageField @s #outcomes
   ifSome (outcomes #: swapId)
     (\o -> case_ o
-      ( #cRefunded //-> 
+      ( #cRefunded //->
           \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
-      , #cHashRevealed //-> 
+      , #cHashRevealed //->
           \_ -> setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cSecretRevealed secret)
-      , #cSecretRevealed //-> 
+      , #cSecretRevealed //->
           \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
       )
     )
     (void $ failCustom #swapLockDoesNotExists swapId)
-  
+
   swaps <- getStorageField @s #swaps
-  
+
   ifSome (swaps #: swapId)
     (\s -> do
-       when (now > s #! #sReleaseTime) $ failCustom #swapIsOver $ s #! #sReleaseTime
+       when (now >= s #! #sReleaseTime) $ failCustom #swapIsOver $ s #! #sReleaseTime
        creditTo @s (s #! #sTo) (s #! #sAmount)
     )
     (void $ failCustom #swapLockDoesNotExists swapId)
+
+claimRefund
+  :: forall s sp.
+     ( sp :~> ClaimRefundParams
+     , HasBridge s
+     , HasManagedLedgerStorage s
+     )
+  => IndigoEntrypoint sp
+claimRefund parameter = do
+  swapId <- new$ parameter #! #crpId
+  outcomes <- getStorageField @s #outcomes
+
+  ifSome (outcomes #: swapId)
+    (\o -> case_ o
+      ( #cRefunded //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
+      , #cHashRevealed //-> \_ -> return ()
+      , #cSecretRevealed //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
+      )
+    )
+    $ return ()
+
+  swaps <- getStorageField @s #swaps
+
+  ifSome (swaps #: swapId)
+    (\s -> do
+       when (now < s #! #sReleaseTime) $ failCustom #fundsLock $ s #! #sReleaseTime
+       setStorageField @s #outcomes $ outcomes +: (swapId, Refunded ())
+       creditTo @s (s #! #sFrom) (s #! #sAmount)
+    )
+    (void $ failCustom #swapLockDoesNotExists swapId)
+
 
 ----------------------------------------------------------------------------
 --  Helpers
@@ -146,7 +180,7 @@ debitFrom from val = do
       failNotEnoughBalance curBalance = failCustom @r #notEnoughBalance $ pair
         (val !~ #required)
         (curBalance !~ #present)
-        
+
 -- | Credit the given amount of tokens to a given address in ledger.
 creditTo
   :: forall s to value.

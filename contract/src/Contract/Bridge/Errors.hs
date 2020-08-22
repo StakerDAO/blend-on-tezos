@@ -19,6 +19,8 @@ type instance ErrorArg "tooLongSecrete" = TooLongSecretError
 
 type instance ErrorArg "swapIsOver" = Timestamp
 
+type instance ErrorArg "fundsLock" = Timestamp
+
 type instance ErrorArg "wrongOutcomeStatus" = MText
 
 instance Buildable (CustomError "swapLockAlreadyExists") where
@@ -47,10 +49,14 @@ instance Buildable (CustomError "tooLongSecrete") where
   build (CustomError _ TooLongSecretError {..}) =
     "Expected secrete length limit is " +| tlseExpected |+
     " but actual is " +| tlseActual |+ ""
-    
+
 instance Buildable (CustomError "swapIsOver") where
   build (CustomError _ ts) =
     "Swap was ended at " +| ts |+ "."
+
+instance Buildable (CustomError "fundsLock") where
+  build (CustomError _ ts) =
+    "Funds are still lock and swap will end at " +| ts |+ "."
 
 instance Buildable (CustomError "wrongOutcomeStatus") where
   build (CustomError _ st) =
@@ -78,7 +84,7 @@ instance CustomErrorHasDoc "senderIsNotTheInitiator" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
     "Sender is not the initiator of this swap"
-    
+
 instance CustomErrorHasDoc "tooLongSecrete" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
@@ -90,7 +96,13 @@ instance CustomErrorHasDoc "swapIsOver" where
   customErrDocMdCause =
     "Swap time is over"
   customErrArgumentSemantics = Just "timestamp"
-  
+
+instance CustomErrorHasDoc "fundsLock" where
+  customErrClass = ErrClassActionException
+  customErrDocMdCause =
+    "Funds are still lock"
+  customErrArgumentSemantics = Just "timestamp"
+
 instance CustomErrorHasDoc "wrongOutcomeStatus" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =

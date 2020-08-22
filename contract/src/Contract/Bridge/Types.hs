@@ -6,6 +6,7 @@ module Contract.Bridge.Types
   , RevealSecretHashParams (..)
   , RedeemParams (..)
   , TooLongSecretError (..)
+  , ClaimRefundParams (..)
   ) where
 
 import Indigo
@@ -111,13 +112,13 @@ instance TypeHasDoc RedeemParams where
           ])
        )
     ]
-    
+
 data TooLongSecretError = TooLongSecretError
  { tlseExpected :: Natural
- , tlseActual :: Natural
+ , tlseActual   :: Natural
  } deriving stock Generic
    deriving anyclass (IsoValue, HasAnnotation)
-   
+
 instance TypeHasDoc TooLongSecretError where
   typeDocMdDescription = "Data for too long secter error."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
@@ -129,3 +130,16 @@ instance TypeHasDoc TooLongSecretError where
        )
     ]
 
+newtype ClaimRefundParams = ClaimRefundParams {crpId :: SwapId}
+  deriving stock Generic
+  deriving anyclass (IsoValue, HasAnnotation)
+
+instance TypeHasDoc ClaimRefundParams where
+  typeDocMdDescription = "ClaimRefund params."
+  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "ClaimRefundParams", '( 'Nothing,
+         '[ '("crpId", "Swap id.")
+          ])
+       )
+    ]
