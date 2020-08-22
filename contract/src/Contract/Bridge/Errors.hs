@@ -23,6 +23,8 @@ type instance ErrorArg "fundsLock" = Timestamp
 
 type instance ErrorArg "wrongOutcomeStatus" = MText
 
+type instance ErrorArg "invalidSecrete" = ()
+
 instance Buildable (CustomError "swapLockAlreadyExists") where
   build (CustomError _ swapId) =
     "Swap lock with "
@@ -61,6 +63,10 @@ instance Buildable (CustomError "fundsLock") where
 instance Buildable (CustomError "wrongOutcomeStatus") where
   build (CustomError _ st) =
     "" +| st |+ " outcome status is not valid for this entrypoint."
+
+instance Buildable (CustomError "invalidSecrete") where
+  build (CustomError _ _) =
+    "Hash of the secret doesn't match outcome's secret hash."
 
 instance CustomErrorHasDoc "swapLockAlreadyExists" where
   customErrClass = ErrClassActionException
@@ -108,3 +114,8 @@ instance CustomErrorHasDoc "wrongOutcomeStatus" where
   customErrDocMdCause =
     "Not valid outcome status"
   customErrArgumentSemantics = Just "outcome status"
+
+instance CustomErrorHasDoc "invalidSecrete" where
+  customErrClass = ErrClassActionException
+  customErrDocMdCause =
+    "Invalid secrete hash"

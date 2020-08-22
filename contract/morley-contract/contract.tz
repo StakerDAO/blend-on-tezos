@@ -986,22 +986,18 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                                    PUSH string "WrongOutcomeStatus";
                                                                    PAIR;
                                                                    FAILWITH }
-                                                                 { IF_LEFT { DIP 2
-                                                                                 { DUP };
-                                                                             DIG 2;
+                                                                 { IF_LEFT { DUP;
                                                                              DIP 5
                                                                                  { DUP };
                                                                              DIG 5;
-                                                                             RIGHT bytes;
-                                                                             RIGHT unit;
-                                                                             SOME;
-                                                                             DIP 7
-                                                                                 { DUP };
-                                                                             DIG 7;
-                                                                             UPDATE;
-                                                                             DIP 16
-                                                                                 { DROP };
-                                                                             DUG 15;
+                                                                             SHA256;
+                                                                             COMPARE;
+                                                                             NEQ;
+                                                                             IF { UNIT;
+                                                                                  PUSH string "InvalidSecrete";
+                                                                                  PAIR;
+                                                                                  FAILWITH }
+                                                                                {  };
                                                                              DROP }
                                                                            { PUSH string "SecretRevealed";
                                                                              PUSH string "WrongOutcomeStatus";
@@ -1035,6 +1031,22 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                               PAIR;
                                                               FAILWITH }
                                                             {  };
+                                                         DIP 2
+                                                             { DUP };
+                                                         DIG 2;
+                                                         DIP 5
+                                                             { DUP };
+                                                         DIG 5;
+                                                         RIGHT bytes;
+                                                         RIGHT unit;
+                                                         SOME;
+                                                         DIP 7
+                                                             { DUP };
+                                                         DIG 7;
+                                                         UPDATE;
+                                                         DIP 16
+                                                             { DROP };
+                                                         DUG 15;
                                                          DIP 9
                                                              { DUP };
                                                          DIG 9;

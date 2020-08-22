@@ -61,6 +61,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [AllowanceMismatch](#errors-AllowanceMismatch)
   - [FundsLock](#errors-FundsLock)
   - [InternalError](#errors-InternalError)
+  - [InvalidSecrete](#errors-InvalidSecrete)
   - [NotEnoughAllowance](#errors-NotEnoughAllowance)
   - [NotEnoughBalance](#errors-NotEnoughBalance)
   - [SecreteHashIsAlreadySet](#errors-SecreteHashIsAlreadySet)
@@ -541,6 +542,8 @@ Destroys the given amount of tokens on the account associated with the given add
 * [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
 
 * [`WrongOutcomeStatus`](#errors-WrongOutcomeStatus) — Not valid outcome status
+
+* [`InvalidSecrete`](#errors-InvalidSecrete) — Invalid secrete hash
 
 * [`SwapIsOver`](#errors-SwapIsOver) — Swap time is over
 
@@ -1096,6 +1099,18 @@ Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stan
 **Fires if:** Some internal error occured.
 
 **Representation:** Textual error message, see [`Text`](#types-Text).
+
+<a name="errors-InvalidSecrete"></a>
+
+---
+
+### `InvalidSecrete`
+
+**Class:** Action exception
+
+**Fires if:** Invalid secrete hash
+
+**Representation:** `("InvalidSecrete", ())`.
 
 <a name="errors-NotEnoughAllowance"></a>
 

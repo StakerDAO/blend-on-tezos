@@ -108,7 +108,7 @@ redeem parameter = do
       ( #cRefunded //->
           \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
       , #cHashRevealed //->
-          \_ -> setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cSecretRevealed secret)
+          \secretHash -> when (sha256 secret /= secretHash) $ failCustom_ #invalidSecrete
       , #cSecretRevealed //->
           \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
       )
@@ -120,6 +120,7 @@ redeem parameter = do
   ifSome (swaps #: swapId)
     (\s -> do
        when (now >= s #! #sReleaseTime) $ failCustom #swapIsOver $ s #! #sReleaseTime
+       setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cSecretRevealed secret)
        creditTo @s (s #! #sTo) (s #! #sAmount)
     )
     (void $ failCustom #swapLockDoesNotExists swapId)
