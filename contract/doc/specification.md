@@ -26,6 +26,8 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [revealSecretHash](#entrypoints-revealSecretHash)
   - [redeem](#entrypoints-redeem)
   - [claimRefund](#entrypoints-claimRefund)
+  - [getSwap](#entrypoints-getSwap)
+  - [getOutcome](#entrypoints-getOutcome)
 
 **[Definitions](#definitions)**
 
@@ -571,6 +573,52 @@ Destroys the given amount of tokens on the account associated with the given add
 * [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
 
 * [`FundsLock`](#errors-FundsLock) — Funds are still lock
+
+
+
+<a name="entrypoints-getSwap"></a>
+
+---
+
+### `getSwap`
+
+**Argument:** 
+  + **In Haskell:** [`View`](#types-View) [`SwapId`](#types-SwapId) ([`Maybe`](#types-Maybe) [`Swap`](#types-Swap))
+  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option (pair (pair (address %sFrom) (address %sTo)) (pair (nat %sAmount) (timestamp %sReleaseTime))))))`
+    + **Example:** <span id="example-id">`Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB"`</span>
+
+<details>
+  <summary><b>How to call this entrypoint</b></summary>
+
+0. Construct an argument for the entrypoint.
+1. Call contract's `getSwap` entrypoint passing the constructed argument.
+</details>
+<p>
+
+
+
+
+
+<a name="entrypoints-getOutcome"></a>
+
+---
+
+### `getOutcome`
+
+**Argument:** 
+  + **In Haskell:** [`View`](#types-View) [`SwapId`](#types-SwapId) ([`Maybe`](#types-Maybe) [`Outcome`](#types-Outcome))
+  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option (or (unit %refunded) (or (bytes %hashRevealed) (bytes %secretRevealed))))))`
+    + **Example:** <span id="example-id">`Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB"`</span>
+
+<details>
+  <summary><b>How to call this entrypoint</b></summary>
+
+0. Construct an argument for the entrypoint.
+1. Call contract's `getOutcome` entrypoint passing the constructed argument.
+</details>
+<p>
+
+
 
 
 

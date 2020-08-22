@@ -7,9 +7,14 @@ module Contract.Bridge.Types
   , RedeemParams (..)
   , TooLongSecretError (..)
   , ClaimRefundParams (..)
+  , GetSwapParams
+  , GetOutcomeParams
   ) where
 
 import Indigo
+
+type GetSwapParams = View SwapId (Maybe Swap)
+type GetOutcomeParams = View SwapId (Maybe Outcome)
 
 newtype SwapId = SwapId ByteString
   deriving stock (Eq, Ord, Generic)

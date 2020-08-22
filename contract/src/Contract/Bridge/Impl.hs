@@ -7,8 +7,8 @@ import Indigo
 
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridge)
-import Contract.Bridge.Types (ClaimRefundParams, LockParams, Outcome (..), RedeemParams,
-                              RevealSecretHashParams)
+import Contract.Bridge.Types (ClaimRefundParams, GetOutcomeParams, GetSwapParams, LockParams,
+                              Outcome (..), RedeemParams, RevealSecretHashParams)
 import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
 
 data Parameter
@@ -16,6 +16,8 @@ data Parameter
   | RevealSecretHash RevealSecretHashParams
   | Redeem RedeemParams
   | ClaimRefund ClaimRefundParams
+  | GetSwap GetSwapParams
+  | GetOutcome GetOutcomeParams
   deriving stock Generic
   deriving anyclass IsoValue
 
@@ -36,6 +38,8 @@ entrypoints param = do
     , #cRevealSecretHash //-> revealSecretHash @storage
     , #cRedeem //-> redeem @storage
     , #cClaimRefund //-> claimRefund @storage
+    , #cGetSwap //-> getSwap @storage
+    , #cGetOutcome //-> getOutcome @storage
     )
 
 lock
@@ -150,6 +154,27 @@ claimRefund parameter = do
     )
     (void $ failCustom #swapLockDoesNotExists swapId)
 
+getSwap
+  :: forall s sp.
+     ( sp :~> GetSwapParams
+     , HasBridge s
+     , HasSideEffects
+     )
+  => IndigoEntrypoint sp
+getSwap parameter = do
+  swaps <- getStorageField @s #swaps
+  project parameter $ \p -> return $ swaps #: p
+
+getOutcome
+  :: forall s sp.
+     ( sp :~> GetOutcomeParams
+     , HasBridge s
+     , HasSideEffects
+     )
+  => IndigoEntrypoint sp
+getOutcome parameter = do
+  outcomes <- getStorageField @s #outcomes
+  project parameter $ \p -> return $ outcomes #: p
 
 ----------------------------------------------------------------------------
 --  Helpers
