@@ -99,7 +99,7 @@ redeem parameter = do
 
   secret <- new$ parameter #! #rpSecret
   maxSecretLength <- new$ 32 nat -- TODO now const but maybe make it configurable
-  when (size secret <= maxSecretLength) $
+  when (size secret > maxSecretLength) $
     failCustom #tooLongSecrete $ construct (varExpr maxSecretLength, size secret)
 
   outcomes <- getStorageField @s #outcomes

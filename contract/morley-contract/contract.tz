@@ -957,7 +957,7 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                DIG 2;
                                                SIZE;
                                                COMPARE;
-                                               LE;
+                                               GT;
                                                IF { DUP;
                                                     DIP { DIP { DUP };
                                                           SWAP;
