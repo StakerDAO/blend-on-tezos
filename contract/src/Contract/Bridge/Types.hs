@@ -19,7 +19,7 @@ type GetSwapParams = View SwapId (Maybe Swap)
 type GetOutcomeParams = View SwapId (Maybe Outcome)
 
 newtype SwapId = SwapId ByteString
-  deriving stock (Eq, Ord, Generic)
+  deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc SwapId where
@@ -34,7 +34,7 @@ data Swap = Swap
   , sTo          :: Address
   , sAmount      :: Natural
   , sReleaseTime :: Timestamp
-  } deriving stock Generic
+  } deriving stock (Generic, Show, Eq)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Swap where
@@ -54,7 +54,7 @@ data Outcome
   = Refunded ()
   | HashRevealed ByteString
   | SecretRevealed ByteString
-  deriving stock Generic
+  deriving stock (Generic, Show, Eq)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Outcome where
@@ -72,7 +72,7 @@ data LockParams = LockParams
   , lpAmount      :: Natural
   , lpReleaseTime :: Timestamp
   , lpSecretHash  :: Maybe ByteString
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc LockParams where

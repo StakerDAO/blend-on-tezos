@@ -26,12 +26,18 @@ extra-deps:
     - code/morley-prelude
     - code/lorentz
     - code/indigo
+    - code/cleveland
+    - code/morley-client
 
 # morley-ledgers
 - git: https://gitlab.com/morley-framework/morley-ledgers.git
   commit: 357b3396bc7b28bed987a0b28331c77c679b5cef
   subdirs:
     - code/morley-ledgers
+
+- git: https://github.com/int-index/caps.git
+  commit: c5d61837eb358989b581ed82b1e79158c4823b1b
+  # nix-sha256: 0r1zqa559gaxavsd8zynlpa2c5hi2qc20n8s4bhcdaw36hasg3kr
 
 # required for morley
 - base58-bytestring-0.1.0
@@ -40,3 +46,4 @@ extra-deps:
 - named-0.3.0.1
 - vinyl-0.12.1
 - cryptonite-0.27
+- tasty-hunit-compat-0.2

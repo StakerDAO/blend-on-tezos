@@ -1,5 +1,5 @@
 module Contract.Token.Storage
-  ( ManagedLedgerStorage
+  ( ManagedLedgerStorage (..)
   , StorageSkeleton (..)
   , LedgerValue
   , HasManagedLedgerStorage
@@ -20,7 +20,7 @@ data ManagedLedgerStorage = ManagedLedgerStorage
   , mlsAdmin       :: Address
   , mlsPaused      :: Bool
   , mlsTotalSupply :: Natural
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 type HasManagedLedgerStorage s =

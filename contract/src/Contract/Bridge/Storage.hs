@@ -1,5 +1,5 @@
 module Contract.Bridge.Storage
-  ( BridgeStorage
+  ( BridgeStorage (..)
   , mkStorage
   , HasBridge
   ) where
@@ -11,7 +11,7 @@ import Contract.Bridge.Types (Outcome, Swap, SwapId)
 data BridgeStorage = BridgeStorage
   { sSwaps    :: BigMap SwapId Swap
   , sOutcomes :: BigMap SwapId Outcome
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 mkStorage :: BridgeStorage
