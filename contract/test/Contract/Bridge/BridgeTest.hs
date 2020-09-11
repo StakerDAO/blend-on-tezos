@@ -7,15 +7,16 @@ import Prelude
 import Data.Map (lookup, (!))
 import Hedgehog (forAll)
 import Lorentz (arg)
-import Lorentz.Test (expectError, lCallDef, lExpectCustomError, lExpectStorage, withSender)
+import Lorentz.Test (expectError, lCallDef, lExpectCustomError, lExpectCustomError_, lExpectStorage,
+                     withSender)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 import Util.Named ((.!))
 
 import Contract.BlndOnTezos (Parameter (..), Storage (..))
-import Contract.Bridge (LockParams (..), Outcome (..), Swap (..))
+import Contract.Bridge (LockParams (..), Outcome (..), RevealSecretHashParams (..), Swap (..))
 import qualified Contract.Bridge.Impl as CB
-import Contract.Gen (genLock)
+import Contract.Gen (genLock, genRevealSecretHash, genSwapId)
 import Contract.TestSetup (integrationalTestContract, withBridgeContractP)
 import Contract.TestUtil (OrigParams (..), checkThat, getLedger, getOutcomes, getSwaps,
                           getTotalSupply, lookupE, shouldBe)
@@ -86,4 +87,51 @@ test_Bridge =
             err <- expectError $ withSender opAlice $ lCallDef c $ Bridge $ CB.Lock $ lock
             lExpectCustomError #swapLockAlreadyExists lpId err
     ]
+  , testGroup "Reveal secret hash entrypoint"
+      [ testProperty "Reveal secret hash set the hash" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock False opBob
+            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash lpId
+            integrationalTestContract contractM $ \c -> do
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
+              lExpectStorage @Storage c $ \st -> do
+                checkThat "Outcome doesn't exists" $
+                  lookup lpId (getOutcomes st) `shouldBe` Nothing
+
+              withSender opAlice . lCallDef c $ Bridge $ CB.RevealSecretHash $ rsh
+              lExpectStorage @Storage c $ \st -> do
+                actualOutcome <- lookupE lpId $ getOutcomes st
+                checkThat "Outcome exists and contains secret hash" $
+                  actualOutcome `shouldBe` HashRevealed rshpSecretHash
+      , testProperty "Reveal secret hash fails if swap doesn't exists" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            swapId <- forAll $ genSwapId
+            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash swapId
+            integrationalTestContract contractM $ \c -> do
+              err <- expectError $ withSender opAlice . lCallDef c $
+                Bridge $ CB.RevealSecretHash $ rsh
+              lExpectCustomError #swapLockDoesNotExists rshpId err
+      , testProperty "Reveal secret hash fails if sender is not the initiator" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock False opBob
+            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash lpId
+            integrationalTestContract contractM $ \c -> do
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
+              lExpectStorage @Storage c $ \st -> do
+                checkThat "Outcome doesn't exists" $
+                  lookup lpId (getOutcomes st) `shouldBe` Nothing
+
+              err <- expectError $ withSender opBob . lCallDef c $
+                Bridge $ CB.RevealSecretHash $ rsh
+              lExpectCustomError_ #senderIsNotTheInitiator err
+      , testProperty "Reveal secret hash fails if hash exists" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock True opBob
+            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash lpId
+            integrationalTestContract contractM $ \c -> do
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
+              err <- expectError $ withSender opAlice . lCallDef c $ 
+                Bridge $ CB.RevealSecretHash $ rsh
+              lExpectCustomError #secretHashIsAlreadySet lpId err
+      ]
   ]

@@ -92,7 +92,7 @@ instance TypeHasDoc LockParams where
 data RevealSecretHashParams = RevealSecretHashParams
   { rshpId         :: SwapId
   , rshpSecretHash :: ByteString
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc RevealSecretHashParams where
@@ -109,7 +109,7 @@ instance TypeHasDoc RevealSecretHashParams where
 data RedeemParams = RedeemParams
   { rpId     :: SwapId
   , rpSecret :: ByteString
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc RedeemParams where
@@ -141,7 +141,7 @@ instance TypeHasDoc TooLongSecretError where
     ]
 
 newtype ClaimRefundParams = ClaimRefundParams {crpId :: SwapId}
-  deriving stock Generic
+  deriving stock (Generic, Show)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc ClaimRefundParams where
