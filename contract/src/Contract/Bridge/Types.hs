@@ -11,6 +11,7 @@ module Contract.Bridge.Types
   , GetOutcomeParams
   ) where
 
+import Fmt (Buildable (..))
 import Indigo
 
 import Fmt (Buildable (..), hexF)
@@ -50,6 +51,9 @@ instance TypeHasDoc Swap where
        )
     ]
 
+instance Buildable Swap where
+  build = show
+
 data Outcome
   = Refunded ()
   | HashRevealed ByteString
@@ -65,6 +69,9 @@ instance TypeHasDoc Outcome where
       , '("HashRevealed", '( 'Just "Secret hash was revealed", '[]))
       , '("SecretRevealed", '( 'Just "Secret was revealed", '[]))
       ]
+
+instance Buildable Outcome where
+  build = show
 
 data LockParams = LockParams
   { lpId          :: SwapId
