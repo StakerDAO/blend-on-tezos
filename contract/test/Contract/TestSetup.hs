@@ -7,8 +7,10 @@ module Contract.TestSetup
 import Prelude
 
 import Hedgehog (MonadTest, Property, PropertyT, TestLimit, forAll, property, withTests)
+import Hedgehog.Gen.Tezos.Core (midTimestamp)
 import Lorentz (TAddress, toMutez)
 import Lorentz.Test (IntegrationalScenarioM, integrationalTestProp, lOriginate)
+import Michelson.Test.Integrational (setNow)
 
 import Contract.BlndOnTezos (Parameter, blndOnTezosContract, mkStorage)
 import Contract.Gen (genOrigParams)
@@ -28,7 +30,9 @@ integrationalTestContract
   :: MonadTest m
   => IntegrationalScenarioM t
   -> (t -> IntegrationalScenarioM ()) -> m ()
-integrationalTestContract contractM test = integrationalTestProp $ contractM >>= \c -> test c
+integrationalTestContract contractM test = integrationalTestProp $ contractM >>= \c -> do
+  setNow midTimestamp
+  test c
 
 withBridgeContractP
   :: TestLimit

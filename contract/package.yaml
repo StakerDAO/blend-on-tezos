@@ -80,6 +80,7 @@ ghc-options:
 - -Widentities
 - -Wincomplete-record-updates
 - -Werror
+- -Wno-deprecations
 
 library:
   source-dirs: src

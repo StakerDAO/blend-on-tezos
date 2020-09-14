@@ -126,7 +126,7 @@ instance TypeHasDoc RedeemParams where
 data TooLongSecretError = TooLongSecretError
  { tlseExpected :: Natural
  , tlseActual   :: Natural
- } deriving stock Generic
+ } deriving stock (Generic, Show, Eq)
    deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc TooLongSecretError where
