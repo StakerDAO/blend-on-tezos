@@ -6,17 +6,17 @@ import Prelude
 
 import Data.Map (fromList)
 import Hedgehog.Gen.Tezos.Core (maxTimestamp)
-import Lorentz (EntrypointRef (..))
-import Lorentz.Constraints
-import Lorentz.Run
-import Morley.Nettest
+import Lorentz (Address, Contract, EntrypointRef (..), NiceStorage)
+import Morley.Nettest (AddressOrAlias (..), NettestImpl, NettestScenario, NettestT, callFrom,
+                       comment, mkNettestEnv, nettestConfigParser, newAddress, niComment,
+                       originateSimple, parserInfo, resolveNettestAddress, runNettestClient,
+                       runNettestViaIntegrational, uncapsNettest)
 import qualified Morley.Nettest.ApprovableLedger as ML
-import qualified Options.Applicative as Opt
-import Tezos.Address
+import Options.Applicative (execParser)
 import Tezos.Core (Timestamp (..))
 import Tezos.Crypto (sha256)
 import Util.Exception (displayUncaughtException)
-import Util.Named
+import Util.Named ((.!))
 
 import Contract.BlndOnTezos (Parameter, blndOnTezosContract, mkStorage)
 import Contract.Bridge (ClaimRefundParams (..), LockParams (..), RedeemParams (..),
@@ -24,7 +24,7 @@ import Contract.Bridge (ClaimRefundParams (..), LockParams (..), RedeemParams (.
 
 main :: IO ()
 main = displayUncaughtException do
-  cfg <- Opt.execParser $ parserInfo
+  cfg <- execParser $ parserInfo
     (#usage .! mempty)
     (#description .! "BlndOnTezos nettest scenario")
     (#header .! "BlndOnTezos nettest")

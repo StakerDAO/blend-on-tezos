@@ -117,6 +117,7 @@ tests:
     dependencies:
     - blnd-on-tezos
     - tasty
+    - tasty-hspec
     - hspec
     - QuickCheck
     - cleveland
@@ -126,6 +127,7 @@ tests:
     - tasty-hedgehog
     - containers
     - fmt
+    - morley-ledgers-test
 
   blnd-on-tezos-nettest:
     main:        Main.hs
