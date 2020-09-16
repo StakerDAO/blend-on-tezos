@@ -11,7 +11,6 @@ module Contract.Bridge.Types
   , GetOutcomeParams
   ) where
 
-import Fmt (Buildable (..))
 import Indigo
 
 import Fmt (Buildable (..), hexF)

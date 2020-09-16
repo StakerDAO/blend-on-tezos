@@ -114,7 +114,7 @@ test_Bridge =
             integrationalTestContract contractM $ \c -> do
               err <- expectError $ withSender opAlice . lCallDef c $
                 Bridge $ CB.RevealSecretHash $ rsh
-              lExpectCustomError #swapLockDoesNotExists rshpId err
+              lExpectCustomError #swapLockDoesNotExist rshpId err
 
       , testProperty "Reveal secret hash fails if sender is not the initiator" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
@@ -178,7 +178,7 @@ test_Bridge =
             (redeem@RedeemParams{..}, _) <- forAll $ genRedeem lpId
             integrationalTestContract contractM $ \c -> do
               err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError #swapLockDoesNotExists lpId err
+              lExpectCustomError #swapLockDoesNotExist lpId err
 
       , testProperty "Redeem fails if swap is over" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
@@ -197,7 +197,7 @@ test_Bridge =
             integrationalTestContract contractM $ \c -> do
               withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
               err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError #swapLockDoesNotExists lpId err
+              lExpectCustomError #swapLockDoesNotExist lpId err
 
       , testProperty "Redeem fails with invalid secret" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
@@ -259,7 +259,7 @@ test_Bridge =
             integrationalTestContract contractM $ \c -> do
               err <- expectError $ withSender opAlice . lCallDef c $
                 Bridge $ CB.ClaimRefund $ refund
-              lExpectCustomError #swapLockDoesNotExists swapId err
+              lExpectCustomError #swapLockDoesNotExist swapId err
 
       , testProperty "Refund fails if swap is not over" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do

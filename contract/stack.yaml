@@ -31,7 +31,7 @@ extra-deps:
 
 # morley-ledgers
 - git: https://gitlab.com/morley-framework/morley-ledgers.git
-  commit: 624f3b42fcf54d8e8e5845db366ab34250b32bf2
+  commit: 6d24cac25941b55cb7e45d859cd8cb01f2415c92
   subdirs:
     - code/morley-ledgers
     - code/morley-ledgers-test
