@@ -15,8 +15,8 @@ import Lorentz (Address, unBigMap)
 import Lorentz.Test (TestError (..))
 
 import Contract.BlndOnTezos (Storage (..))
+import Contract.Bridge (BridgeStorage (..), Outcome, Swap, SwapId)
 import Contract.Token (LedgerValue, ManagedLedgerStorage (..))
-import Contract.Bridge (SwapId, Outcome, Swap, BridgeStorage (..))
 import Data.Map (lookup)
 
 data OrigParams = OrigParams
@@ -27,7 +27,7 @@ data OrigParams = OrigParams
 
 lookupE :: (Show k, Ord k) => k -> Map k b -> Either TestError b
 lookupE a m = case lookup a m of
-  Just b -> Right b
+  Just b  -> Right b
   Nothing -> Left $ CustomTestError $ "No such key in map" <> show a
 
 shouldBe :: (Eq a, Show a) => a -> a -> Either Text ()

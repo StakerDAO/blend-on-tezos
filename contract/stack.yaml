@@ -20,7 +20,7 @@ extra-deps:
 
 # morley
 - git: https://gitlab.com/morley-framework/morley.git
-  commit: 9def1f29ec812781421fa3a35fddb4669f056e6e
+  commit: 48cc2608392b387941817a7b5126c0f7b289626b
   subdirs:
     - code/morley
     - code/morley-prelude
@@ -31,9 +31,10 @@ extra-deps:
 
 # morley-ledgers
 - git: https://gitlab.com/morley-framework/morley-ledgers.git
-  commit: 357b3396bc7b28bed987a0b28331c77c679b5cef
+  commit: 624f3b42fcf54d8e8e5845db366ab34250b32bf2
   subdirs:
     - code/morley-ledgers
+    - code/morley-ledgers-test
 
 - git: https://github.com/int-index/caps.git
   commit: c5d61837eb358989b581ed82b1e79158c4823b1b

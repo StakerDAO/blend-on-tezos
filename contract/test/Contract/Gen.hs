@@ -11,7 +11,7 @@ module Contract.Gen
 
 import Prelude
 
-import Data.Coerce (coerce)
+import qualified Data.Coerce as DC
 import Data.Map (fromList)
 import Hedgehog (MonadGen)
 import Hedgehog.Gen (bytes, discard)
@@ -39,7 +39,7 @@ genAddress :: MonadGen m => m Address
 genAddress = KeyAddress <$> genKeyHash
 
 genSwapId :: MonadGen m => m SwapId
-genSwapId = coerce <$> genByteString
+genSwapId = DC.coerce <$> genByteString
 
 genOrigParams :: MonadGen m => m OrigParams
 genOrigParams = do
@@ -58,7 +58,7 @@ genLock withSecret to = do
   secretHash <- genByteString
   let ts = maxTimestamp
   pure LockParams
-    { lpId          = coerce swapId
+    { lpId          = DC.coerce swapId
     , lpTo          = to
     , lpAmount      = 100
     , lpReleaseTime = ts

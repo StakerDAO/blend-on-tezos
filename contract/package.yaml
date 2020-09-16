@@ -126,3 +126,19 @@ tests:
     - tasty-hedgehog
     - containers
     - fmt
+
+  blnd-on-tezos-nettest:
+    main:        Main.hs
+    source-dirs: nettest
+    ghc-options:
+      - -threaded
+      - -with-rtsopts=-N
+    dependencies:
+      - cleveland
+      - morley
+      - morley-prelude
+      - optparse-applicative
+      - blnd-on-tezos
+      - lorentz
+      - morley-ledgers-test
+      - containers
