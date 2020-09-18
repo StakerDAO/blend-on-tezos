@@ -2,20 +2,19 @@ module Contract.Bridge.Errors () where
 
 import Indigo
 
-import Data.Coerce (coerce)
 import Fmt (Buildable (..), (+|), (|+))
 
 import Contract.Bridge.Types (SwapId (..), TooLongSecretError (..))
 
 type instance ErrorArg "swapLockAlreadyExists" = SwapId
 
-type instance ErrorArg "swapLockDoesNotExists" = SwapId
+type instance ErrorArg "swapLockDoesNotExist" = SwapId
 
-type instance ErrorArg "secreteHashIsAlreadySet" = SwapId
+type instance ErrorArg "secretHashIsAlreadySet" = SwapId
 
 type instance ErrorArg "senderIsNotTheInitiator" = ()
 
-type instance ErrorArg "tooLongSecrete" = TooLongSecretError
+type instance ErrorArg "tooLongSecret" = TooLongSecretError
 
 type instance ErrorArg "swapIsOver" = Timestamp
 
@@ -23,33 +22,27 @@ type instance ErrorArg "fundsLock" = Timestamp
 
 type instance ErrorArg "wrongOutcomeStatus" = MText
 
-type instance ErrorArg "invalidSecrete" = ()
+type instance ErrorArg "invalidSecret" = ()
 
 instance Buildable (CustomError "swapLockAlreadyExists") where
   build (CustomError _ swapId) =
-    "Swap lock with "
-    +| decodeUtf8 @Text @ByteString (coerce swapId) |+
-    " id already exists"
+    "Swap lock with " +| swapId |+ " id already exists"
 
-instance Buildable (CustomError "swapLockDoesNotExists") where
+instance Buildable (CustomError "swapLockDoesNotExist") where
   build (CustomError _ swapId) =
-    "Swap lock with "
-    +| decodeUtf8 @Text @ByteString (coerce swapId) |+
-    " id does not exists"
+    "Swap lock with " +| swapId |+ " id does not exists"
 
-instance Buildable (CustomError "secreteHashIsAlreadySet") where
+instance Buildable (CustomError "secretHashIsAlreadySet") where
   build (CustomError _ swapId) =
-    "Secrete hash for swap with "
-    +| decodeUtf8 @Text @ByteString (coerce swapId) |+
-    " id is already set"
+    "Secret hash for swap with " +| swapId |+ " id is already set"
 
 instance Buildable (CustomError "senderIsNotTheInitiator") where
   build (CustomError _ _) =
     "You are not the initiator of this swap"
 
-instance Buildable (CustomError "tooLongSecrete") where
+instance Buildable (CustomError "tooLongSecret") where
   build (CustomError _ TooLongSecretError {..}) =
-    "Expected secrete length limit is " +| tlseExpected |+
+    "Expected secret length limit is " +| tlseExpected |+
     " but actual is " +| tlseActual |+ ""
 
 instance Buildable (CustomError "swapIsOver") where
@@ -64,7 +57,7 @@ instance Buildable (CustomError "wrongOutcomeStatus") where
   build (CustomError _ st) =
     "" +| st |+ " outcome status is not valid for this entrypoint."
 
-instance Buildable (CustomError "invalidSecrete") where
+instance Buildable (CustomError "invalidSecret") where
   build (CustomError _ _) =
     "Hash of the secret doesn't match outcome's secret hash."
 
@@ -74,16 +67,16 @@ instance CustomErrorHasDoc "swapLockAlreadyExists" where
     "Lock with this id already exists"
   customErrArgumentSemantics = Just "swap id"
 
-instance CustomErrorHasDoc "swapLockDoesNotExists" where
+instance CustomErrorHasDoc "swapLockDoesNotExist" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
     "Lock with this id does not exists"
   customErrArgumentSemantics = Just "swap id"
 
-instance CustomErrorHasDoc "secreteHashIsAlreadySet" where
+instance CustomErrorHasDoc "secretHashIsAlreadySet" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Secrete hash is already set for swap with certain id"
+    "Secret hash is already set for swap with certain id"
   customErrArgumentSemantics = Just "swap id"
 
 instance CustomErrorHasDoc "senderIsNotTheInitiator" where
@@ -91,7 +84,7 @@ instance CustomErrorHasDoc "senderIsNotTheInitiator" where
   customErrDocMdCause =
     "Sender is not the initiator of this swap"
 
-instance CustomErrorHasDoc "tooLongSecrete" where
+instance CustomErrorHasDoc "tooLongSecret" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
     "Secret length in longer then its limit"
@@ -115,7 +108,7 @@ instance CustomErrorHasDoc "wrongOutcomeStatus" where
     "Not valid outcome status"
   customErrArgumentSemantics = Just "outcome status"
 
-instance CustomErrorHasDoc "invalidSecrete" where
+instance CustomErrorHasDoc "invalidSecret" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Invalid secrete hash"
+    "Invalid secret hash"

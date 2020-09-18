@@ -78,14 +78,14 @@ revealSecretHash parameter = do
   swapId <- new$ parameter #! #rshpId
 
   ifNone (swaps #: swapId)
-    (void $ failCustom #swapLockDoesNotExists swapId) $
+    (void $ failCustom #swapLockDoesNotExist swapId) $
     \s -> when (sender /= (s #! #sFrom)) $ failCustom_ #senderIsNotTheInitiator
 
   outcomes <- getStorageField @s #outcomes
-  whenSome (outcomes #: swapId) $ \_ -> failCustom #secreteHashIsAlreadySet swapId
+  whenSome (outcomes #: swapId) $ \_ -> failCustom #secretHashIsAlreadySet swapId
 
   setStorageField @s #outcomes $ outcomes +:
-    (swapId, wrap #cHashRevealed $ parameter #! #rshpSecreteHash)
+    (swapId, wrap #cHashRevealed $ parameter #! #rshpSecretHash)
 
 redeem
   :: forall s sp.
@@ -100,7 +100,7 @@ redeem parameter = do
   secret <- new$ parameter #! #rpSecret
   maxSecretLength <- new$ 32 nat -- TODO now const but maybe make it configurable
   when (size secret > maxSecretLength) $
-    failCustom #tooLongSecrete $ construct (varExpr maxSecretLength, size secret)
+    failCustom #tooLongSecret $ construct (varExpr maxSecretLength, size secret)
 
   outcomes <- getStorageField @s #outcomes
   ifSome (outcomes #: swapId)
@@ -108,12 +108,12 @@ redeem parameter = do
       ( #cRefunded //->
           \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
       , #cHashRevealed //->
-          \secretHash -> when (sha256 secret /= secretHash) $ failCustom_ #invalidSecrete
+          \secretHash -> when (sha256 secret /= secretHash) $ failCustom_ #invalidSecret
       , #cSecretRevealed //->
           \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
       )
     )
-    (void $ failCustom #swapLockDoesNotExists swapId)
+    (void $ failCustom #swapLockDoesNotExist swapId)
 
   swaps <- getStorageField @s #swaps
 
@@ -123,7 +123,7 @@ redeem parameter = do
        setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cSecretRevealed secret)
        creditTo @s (s #! #sTo) (s #! #sAmount)
     )
-    (void $ failCustom #swapLockDoesNotExists swapId)
+    (void $ failCustom #swapLockDoesNotExist swapId)
 
 claimRefund
   :: forall s sp.
@@ -139,11 +139,11 @@ claimRefund parameter = do
   ifSome (outcomes #: swapId)
     (\o -> case_ o
       ( #cRefunded //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
-      , #cHashRevealed //-> \_ -> return ()
+      , #cHashRevealed //-> \_ -> pass
       , #cSecretRevealed //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
       )
     )
-    $ return ()
+    $ pass
 
   swaps <- getStorageField @s #swaps
 
@@ -153,7 +153,7 @@ claimRefund parameter = do
        setStorageField @s #outcomes $ outcomes +: (swapId, Refunded ())
        creditTo @s (s #! #sFrom) (s #! #sAmount)
     )
-    (void $ failCustom #swapLockDoesNotExists swapId)
+    (void $ failCustom #swapLockDoesNotExist swapId)
 
 getSwap
   :: forall s sp.

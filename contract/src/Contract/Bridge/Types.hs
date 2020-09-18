@@ -13,6 +13,8 @@ module Contract.Bridge.Types
 
 import Indigo
 
+import Fmt (Buildable (..), hexF)
+
 type GetSwapParams = View SwapId (Maybe Swap)
 type GetOutcomeParams = View SwapId (Maybe Outcome)
 
@@ -23,6 +25,9 @@ newtype SwapId = SwapId ByteString
 instance TypeHasDoc SwapId where
   typeDocMdDescription = "Id of the swap."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+
+instance Buildable SwapId where
+  build (SwapId sId) = hexF sId
 
 data Swap = Swap
   { sFrom        :: Address
@@ -85,8 +90,8 @@ instance TypeHasDoc LockParams where
     ]
 
 data RevealSecretHashParams = RevealSecretHashParams
-  { rshpId          :: SwapId
-  , rshpSecreteHash :: ByteString
+  { rshpId         :: SwapId
+  , rshpSecretHash :: ByteString
   } deriving stock Generic
     deriving anyclass (IsoValue, HasAnnotation)
 
@@ -96,7 +101,7 @@ instance TypeHasDoc RevealSecretHashParams where
   type TypeDocFieldDescriptions _ =
    '[ '( "RevealSecretHashParams", '( 'Nothing,
          '[ '("rshpId", "Swap id.")
-          , '("rshpSecreteHash", "Hash of the secret.")
+          , '("rshpSecretHash", "Hash of the secret.")
           ])
        )
     ]
@@ -129,8 +134,8 @@ instance TypeHasDoc TooLongSecretError where
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
    '[ '( "TooLongSecretError", '( 'Nothing,
-         '[ '("tlseExpected", "Expected lenght limit of the secrete.")
-          , '("tlseActual", "Actual lenght of the secrete.")
+         '[ '("tlseExpected", "Expected lenght limit of the secret.")
+          , '("tlseActual", "Actual lenght of the secret.")
           ])
        )
     ]

@@ -61,17 +61,17 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [AllowanceMismatch](#errors-AllowanceMismatch)
   - [FundsLock](#errors-FundsLock)
   - [InternalError](#errors-InternalError)
-  - [InvalidSecrete](#errors-InvalidSecrete)
+  - [InvalidSecret](#errors-InvalidSecret)
   - [NotEnoughAllowance](#errors-NotEnoughAllowance)
   - [NotEnoughBalance](#errors-NotEnoughBalance)
-  - [SecreteHashIsAlreadySet](#errors-SecreteHashIsAlreadySet)
+  - [SecretHashIsAlreadySet](#errors-SecretHashIsAlreadySet)
   - [SenderIsNotAdmin](#errors-SenderIsNotAdmin)
   - [SenderIsNotTheInitiator](#errors-SenderIsNotTheInitiator)
   - [SwapIsOver](#errors-SwapIsOver)
   - [SwapLockAlreadyExists](#errors-SwapLockAlreadyExists)
-  - [SwapLockDoesNotExists](#errors-SwapLockDoesNotExists)
+  - [SwapLockDoesNotExist](#errors-SwapLockDoesNotExist)
   - [TokenOperationsArePaused](#errors-TokenOperationsArePaused)
-  - [TooLongSecrete](#errors-TooLongSecrete)
+  - [TooLongSecret](#errors-TooLongSecret)
   - [UnsafeAllowanceChange](#errors-UnsafeAllowanceChange)
   - [WrongOutcomeStatus](#errors-WrongOutcomeStatus)
 
@@ -493,7 +493,7 @@ Destroys the given amount of tokens on the account associated with the given add
 
 **Argument:** 
   + **In Haskell:** [`RevealSecretHashParams`](#types-RevealSecretHashParams)
-  + **In Michelson:** `(pair (bytes %rshpId) (bytes %rshpSecreteHash))`
+  + **In Michelson:** `(pair (bytes %rshpId) (bytes %rshpSecretHash))`
     + **Example:** <span id="example-id">`Pair 0x0a 0x0a`</span>
 
 <details>
@@ -507,11 +507,11 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 **Possible errors:**
-* [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
+* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
 
 * [`SenderIsNotTheInitiator`](#errors-SenderIsNotTheInitiator) — Sender is not the initiator of this swap
 
-* [`SecreteHashIsAlreadySet`](#errors-SecreteHashIsAlreadySet) — Secrete hash is already set for swap with certain id
+* [`SecretHashIsAlreadySet`](#errors-SecretHashIsAlreadySet) — Secret hash is already set for swap with certain id
 
 
 
@@ -537,13 +537,13 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 **Possible errors:**
-* [`TooLongSecrete`](#errors-TooLongSecrete) — Secret length in longer then its limit
+* [`TooLongSecret`](#errors-TooLongSecret) — Secret length in longer then its limit
 
-* [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
+* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
 
 * [`WrongOutcomeStatus`](#errors-WrongOutcomeStatus) — Not valid outcome status
 
-* [`InvalidSecrete`](#errors-InvalidSecrete) — Invalid secrete hash
+* [`InvalidSecret`](#errors-InvalidSecret) — Invalid secret hash
 
 * [`SwapIsOver`](#errors-SwapIsOver) — Swap time is over
 
@@ -573,7 +573,7 @@ Destroys the given amount of tokens on the account associated with the given add
 **Possible errors:**
 * [`WrongOutcomeStatus`](#errors-WrongOutcomeStatus) — Not valid outcome status
 
-* [`SwapLockDoesNotExists`](#errors-SwapLockDoesNotExists) — Lock with this id does not exists
+* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
 
 * [`FundsLock`](#errors-FundsLock) — Funds are still lock
 
@@ -912,7 +912,7 @@ RevealSecretHash entrypoint params.
 **Structure:** 
   * ***id*** :[`SwapId`](#types-SwapId)    
 Swap id.
-  * ***secreteHash*** :[`ByteString`](#types-ByteString)    
+  * ***secretHash*** :[`ByteString`](#types-ByteString)    
 Hash of the secret.
 
 **Final Michelson representation:** `pair bytes bytes`
@@ -992,9 +992,9 @@ Data for too long secter error.
 
 **Structure:** 
   * ***expected*** :[`Natural`](#types-Natural)    
-Expected lenght limit of the secrete.
+Expected lenght limit of the secret.
   * ***actual*** :[`Natural`](#types-Natural)    
-Actual lenght of the secrete.
+Actual lenght of the secret.
 
 **Final Michelson representation:** `pair nat nat`
 
@@ -1100,17 +1100,17 @@ Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stan
 
 **Representation:** Textual error message, see [`Text`](#types-Text).
 
-<a name="errors-InvalidSecrete"></a>
+<a name="errors-InvalidSecret"></a>
 
 ---
 
-### `InvalidSecrete`
+### `InvalidSecret`
 
 **Class:** Action exception
 
-**Fires if:** Invalid secrete hash
+**Fires if:** Invalid secret hash
 
-**Representation:** `("InvalidSecrete", ())`.
+**Representation:** `("InvalidSecret", ())`.
 
 <a name="errors-NotEnoughAllowance"></a>
 
@@ -1140,17 +1140,17 @@ Provided error argument will be of type (***required*** : [`Natural`](#types-Nat
 
 Provided error argument will be of type (***required*** : [`Natural`](#types-Natural), ***present*** : [`Natural`](#types-Natural)).
 
-<a name="errors-SecreteHashIsAlreadySet"></a>
+<a name="errors-SecretHashIsAlreadySet"></a>
 
 ---
 
-### `SecreteHashIsAlreadySet`
+### `SecretHashIsAlreadySet`
 
 **Class:** Action exception
 
-**Fires if:** Secrete hash is already set for swap with certain id
+**Fires if:** Secret hash is already set for swap with certain id
 
-**Representation:** `("SecreteHashIsAlreadySet", <error argument>)`.
+**Representation:** `("SecretHashIsAlreadySet", <error argument>)`.
 
 Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
 
@@ -1206,17 +1206,17 @@ Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stan
 
 Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
 
-<a name="errors-SwapLockDoesNotExists"></a>
+<a name="errors-SwapLockDoesNotExist"></a>
 
 ---
 
-### `SwapLockDoesNotExists`
+### `SwapLockDoesNotExist`
 
 **Class:** Action exception
 
 **Fires if:** Lock with this id does not exists
 
-**Representation:** `("SwapLockDoesNotExists", <error argument>)`.
+**Representation:** `("SwapLockDoesNotExist", <error argument>)`.
 
 Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
 
@@ -1232,17 +1232,17 @@ Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for 
 
 **Representation:** `("TokenOperationsArePaused", ())`.
 
-<a name="errors-TooLongSecrete"></a>
+<a name="errors-TooLongSecret"></a>
 
 ---
 
-### `TooLongSecrete`
+### `TooLongSecret`
 
 **Class:** Action exception
 
 **Fires if:** Secret length in longer then its limit
 
-**Representation:** `("TooLongSecrete", <error argument>)`.
+**Representation:** `("TooLongSecret", <error argument>)`.
 
 Provided error argument will be of type [`TooLongSecretError`](#types-TooLongSecretError) and stand for actual and expected length.
 
