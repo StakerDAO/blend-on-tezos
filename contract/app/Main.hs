@@ -2,7 +2,7 @@ module Main where
 
 import Prelude
 
-import Contract
+import Contract.ContractCommunication (printContractInformation)
 
 main :: IO ()
-main = printContractWithInitStorage
+main = printContractInformation

@@ -1,1 +1,1 @@
-Pair { } (Pair { } (Pair (Pair "tz1b3eGoYhuJ6cPPHAr1SZrYdZGtoYGyxqEW" False) (Pair 0 "")))
+Pair (Pair (Pair { } { }) (Pair "tz1b3eGoYhuJ6cPPHAr1SZrYdZGtoYGyxqEW" (Pair False 0))) (Pair { } { })

@@ -87,9 +87,11 @@ library:
   - autoexporter
   dependencies:
   - indigo
+  - fmt
   - lorentz
   - morley
   - morley-ledgers
+  - text
 
 executables:
   blnd-on-tezos:
