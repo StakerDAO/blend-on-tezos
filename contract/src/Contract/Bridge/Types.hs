@@ -19,7 +19,7 @@ type GetSwapParams = View SwapId (Maybe Swap)
 type GetOutcomeParams = View SwapId (Maybe Outcome)
 
 newtype SwapId = SwapId ByteString
-  deriving stock (Eq, Ord, Generic)
+  deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc SwapId where
@@ -34,7 +34,7 @@ data Swap = Swap
   , sTo          :: Address
   , sAmount      :: Natural
   , sReleaseTime :: Timestamp
-  } deriving stock Generic
+  } deriving stock (Generic, Show, Eq)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Swap where
@@ -50,11 +50,14 @@ instance TypeHasDoc Swap where
        )
     ]
 
+instance Buildable Swap where
+  build = show
+
 data Outcome
   = Refunded ()
   | HashRevealed ByteString
   | SecretRevealed ByteString
-  deriving stock Generic
+  deriving stock (Generic, Show, Eq)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Outcome where
@@ -66,13 +69,16 @@ instance TypeHasDoc Outcome where
       , '("SecretRevealed", '( 'Just "Secret was revealed", '[]))
       ]
 
+instance Buildable Outcome where
+  build = show
+
 data LockParams = LockParams
   { lpId          :: SwapId
   , lpTo          :: Address
   , lpAmount      :: Natural
   , lpReleaseTime :: Timestamp
   , lpSecretHash  :: Maybe ByteString
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc LockParams where
@@ -92,7 +98,7 @@ instance TypeHasDoc LockParams where
 data RevealSecretHashParams = RevealSecretHashParams
   { rshpId         :: SwapId
   , rshpSecretHash :: ByteString
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc RevealSecretHashParams where
@@ -109,7 +115,7 @@ instance TypeHasDoc RevealSecretHashParams where
 data RedeemParams = RedeemParams
   { rpId     :: SwapId
   , rpSecret :: ByteString
-  } deriving stock Generic
+  } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc RedeemParams where
@@ -126,7 +132,7 @@ instance TypeHasDoc RedeemParams where
 data TooLongSecretError = TooLongSecretError
  { tlseExpected :: Natural
  , tlseActual   :: Natural
- } deriving stock Generic
+ } deriving stock (Generic, Show, Eq)
    deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc TooLongSecretError where
@@ -141,7 +147,7 @@ instance TypeHasDoc TooLongSecretError where
     ]
 
 newtype ClaimRefundParams = ClaimRefundParams {crpId :: SwapId}
-  deriving stock Generic
+  deriving stock (Generic, Show)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc ClaimRefundParams where

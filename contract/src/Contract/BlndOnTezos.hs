@@ -3,8 +3,8 @@ module Contract.BlndOnTezos
   , blndOnTezosContract
   , blndOnTezosDoc
   , mkStorage
-  , Parameter
-  , Storage
+  , Parameter (..)
+  , Storage (..)
   ) where
 
 import Indigo
@@ -29,7 +29,7 @@ data Storage = Storage
   { sToken  :: Token.ManagedLedgerStorage
   , sBridge :: Bridge.BridgeStorage
   }
-  deriving stock Generic
+  deriving stock (Generic, Show)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Storage where

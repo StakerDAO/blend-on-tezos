@@ -1,6 +1,6 @@
 module Contract.Token.Impl
   ( entrypoints
-  , Parameter
+  , Parameter (..)
   ) where
 
 import Indigo

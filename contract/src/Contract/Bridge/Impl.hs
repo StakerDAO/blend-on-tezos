@@ -1,6 +1,6 @@
 module Contract.Bridge.Impl
   ( entrypoints
-  , Parameter
+  , Parameter (..)
   ) where
 
 import Indigo
