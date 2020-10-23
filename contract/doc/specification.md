@@ -67,6 +67,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [SenderIsNotTheInitiator](#errors-SenderIsNotTheInitiator)
   - [SwapIsAlreadyConfirmed](#errors-SwapIsAlreadyConfirmed)
   - [SwapIsNotConfirmed](#errors-SwapIsNotConfirmed)
+  - [SwapIsOver](#errors-SwapIsOver)
   - [SwapLockAlreadyExists](#errors-SwapLockAlreadyExists)
   - [SwapLockDoesNotExist](#errors-SwapLockDoesNotExist)
   - [TokenOperationsArePaused](#errors-TokenOperationsArePaused)
@@ -477,7 +478,7 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 **Possible errors:**
-* [`SwapLockAlreadyExists`](#errors-SwapLockAlreadyExists) — Lock with this id already exists
+* [`SwapLockAlreadyExists`](#errors-SwapLockAlreadyExists) — Lock with this hash already exists
 
 * [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
 
@@ -505,11 +506,11 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 **Possible errors:**
-* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
+* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this hash does not exists
 
 * [`SenderIsNotTheInitiator`](#errors-SenderIsNotTheInitiator) — Sender is not the initiator of this swap
 
-* [`SwapIsAlreadyConfirmed`](#errors-SwapIsAlreadyConfirmed) — Secret hash is already set for swap with certain id
+* [`SwapIsAlreadyConfirmed`](#errors-SwapIsAlreadyConfirmed) — Swap is already confirmed
 
 
 
@@ -537,9 +538,11 @@ Destroys the given amount of tokens on the account associated with the given add
 **Possible errors:**
 * [`TooLongSecret`](#errors-TooLongSecret) — Secret length in longer then its limit
 
-* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
+* [`SwapIsOver`](#errors-SwapIsOver) — Swap is over
 
-* [`SwapIsNotConfirmed`](#errors-SwapIsNotConfirmed) — Swap time is over
+* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this hash does not exists
+
+* [`SwapIsNotConfirmed`](#errors-SwapIsNotConfirmed) — Swap is not confirmed
 
 
 
@@ -565,7 +568,7 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 **Possible errors:**
-* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
+* [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this hash does not exists
 
 * [`FundsLock`](#errors-FundsLock) — Funds are still lock
 
@@ -1148,11 +1151,11 @@ Provided error argument will be of type (***required*** : [`Natural`](#types-Nat
 
 **Class:** Action exception
 
-**Fires if:** Secret hash is already set for swap with certain id
+**Fires if:** Swap is already confirmed
 
 **Representation:** `("SwapIsAlreadyConfirmed", <error argument>)`.
 
-Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap id.
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap hash.
 
 <a name="errors-SwapIsNotConfirmed"></a>
 
@@ -1162,11 +1165,25 @@ Provided error argument will be of type [`SecretHash`](#types-SecretHash) and st
 
 **Class:** Action exception
 
-**Fires if:** Swap time is over
+**Fires if:** Swap is not confirmed
 
 **Representation:** `("SwapIsNotConfirmed", <error argument>)`.
 
-Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for timestamp.
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap hash.
+
+<a name="errors-SwapIsOver"></a>
+
+---
+
+### `SwapIsOver`
+
+**Class:** Action exception
+
+**Fires if:** Swap is over
+
+**Representation:** `("SwapIsOver", <error argument>)`.
+
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap hash.
 
 <a name="errors-SwapLockAlreadyExists"></a>
 
@@ -1176,11 +1193,11 @@ Provided error argument will be of type [`SecretHash`](#types-SecretHash) and st
 
 **Class:** Action exception
 
-**Fires if:** Lock with this id already exists
+**Fires if:** Lock with this hash already exists
 
 **Representation:** `("SwapLockAlreadyExists", <error argument>)`.
 
-Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap id.
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap hash.
 
 <a name="errors-SwapLockDoesNotExist"></a>
 
@@ -1190,11 +1207,11 @@ Provided error argument will be of type [`SecretHash`](#types-SecretHash) and st
 
 **Class:** Action exception
 
-**Fires if:** Lock with this id does not exists
+**Fires if:** Lock with this hash does not exists
 
 **Representation:** `("SwapLockDoesNotExist", <error argument>)`.
 
-Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap id.
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap hash.
 
 <a name="errors-TokenOperationsArePaused"></a>
 

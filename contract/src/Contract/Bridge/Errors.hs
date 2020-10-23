@@ -24,15 +24,15 @@ type instance ErrorArg "swapIsOver" = SecretHash
 
 instance Buildable (CustomError "swapLockAlreadyExists") where
   build (CustomError _ secretHash) =
-    "Swap lock with " +| secretHash |+ " id already exists"
+    "Swap lock with " +| secretHash |+ " hash already exists"
 
 instance Buildable (CustomError "swapLockDoesNotExist") where
   build (CustomError _ secretHash) =
-    "Swap lock with " +| secretHash |+ " id does not exists"
+    "Swap lock with " +| secretHash |+ " hash does not exists"
 
 instance Buildable (CustomError "swapIsAlreadyConfirmed") where
   build (CustomError _ secretHash) =
-    "Secret hash for swap with " +| secretHash |+ " id is already set"
+    "Swap with " +| secretHash |+ " hash is already confirmed"
 
 instance Buildable (CustomError "senderIsNotTheInitiator") where
   build (CustomError _ _) =
@@ -45,33 +45,33 @@ instance Buildable (CustomError "tooLongSecret") where
 
 instance Buildable (CustomError "swapIsNotConfirmed") where
   build (CustomError _ secretHash) =
-    "Swap was ended at " +| secretHash |+ "."
+    "Swap with " +| secretHash |+ " hash is not confirmed."
 
 instance Buildable (CustomError "fundsLock") where
   build (CustomError _ ts) =
     "Funds are still lock and swap will end at " +| ts |+ "."
 
 instance Buildable (CustomError "swapIsOver") where
-  build (CustomError _ ts) =
-    "Swap was ended at " +| ts |+ "."
+  build (CustomError _ secretHash) =
+    "Swap with " +| secretHash |+ " hash is over."
 
 instance CustomErrorHasDoc "swapLockAlreadyExists" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Lock with this id already exists"
-  customErrArgumentSemantics = Just "swap id"
+    "Lock with this hash already exists"
+  customErrArgumentSemantics = Just "swap hash"
 
 instance CustomErrorHasDoc "swapLockDoesNotExist" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Lock with this id does not exists"
-  customErrArgumentSemantics = Just "swap id"
+    "Lock with this hash does not exists"
+  customErrArgumentSemantics = Just "swap hash"
 
 instance CustomErrorHasDoc "swapIsAlreadyConfirmed" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Secret hash is already set for swap with certain id"
-  customErrArgumentSemantics = Just "swap id"
+    "Swap is already confirmed"
+  customErrArgumentSemantics = Just "swap hash"
 
 instance CustomErrorHasDoc "senderIsNotTheInitiator" where
   customErrClass = ErrClassActionException
@@ -87,8 +87,8 @@ instance CustomErrorHasDoc "tooLongSecret" where
 instance CustomErrorHasDoc "swapIsNotConfirmed" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Swap time is over"
-  customErrArgumentSemantics = Just "timestamp"
+    "Swap is not confirmed"
+  customErrArgumentSemantics = Just "swap hash"
 
 instance CustomErrorHasDoc "fundsLock" where
   customErrClass = ErrClassActionException
@@ -99,5 +99,5 @@ instance CustomErrorHasDoc "fundsLock" where
 instance CustomErrorHasDoc "swapIsOver" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Swap time is over"
-  customErrArgumentSemantics = Just "timestamp"
+    "Swap is over"
+  customErrArgumentSemantics = Just "swap hash"

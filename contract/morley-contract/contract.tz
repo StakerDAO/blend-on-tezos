@@ -954,45 +954,32 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                               PAIR;
                                                               FAILWITH }
                                                             {  };
+                                                         DUP;
+                                                         DUP;
+                                                         DIP { CAR };
+                                                         CDR;
+                                                         DUP;
+                                                         DIP { CAR };
+                                                         CDR;
+                                                         DUP;
+                                                         DIP { CAR };
+                                                         CDR;
+                                                         PUSH bool True;
+                                                         SWAP;
+                                                         DROP;
+                                                         SWAP;
+                                                         PAIR;
+                                                         SWAP;
+                                                         PAIR;
+                                                         SWAP;
+                                                         PAIR;
+                                                         SWAP;
+                                                         DROP;
                                                          DIP 2
                                                              { DUP };
                                                          DIG 2;
                                                          DIP { DUP };
                                                          SWAP;
-                                                         CAR;
-                                                         CAR;
-                                                         DIP { DIP { DUP };
-                                                               SWAP;
-                                                               CAR;
-                                                               CDR;
-                                                               CAR;
-                                                               DIP { DIP { DUP };
-                                                                     SWAP;
-                                                                     CAR;
-                                                                     CDR;
-                                                                     CDR };
-                                                               PAIR };
-                                                         PAIR;
-                                                         DIP { DIP { DUP };
-                                                               SWAP;
-                                                               CDR;
-                                                               CAR;
-                                                               CAR;
-                                                               DIP { DIP { DUP };
-                                                                     SWAP;
-                                                                     CDR;
-                                                                     CAR;
-                                                                     CDR };
-                                                               PAIR;
-                                                               DIP { DIP { DUP };
-                                                                     SWAP;
-                                                                     CDR;
-                                                                     CDR;
-                                                                     CAR;
-                                                                     DIP { PUSH bool True };
-                                                                     PAIR };
-                                                               PAIR };
-                                                         PAIR;
                                                          SOME;
                                                          DIP 3
                                                              { DUP };
@@ -1031,6 +1018,19 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                DIP 12
                                                    { DUP };
                                                DIG 12;
+                                               DIP { DUP };
+                                               SWAP;
+                                               DIP 4
+                                                   { DUP };
+                                               DIG 4;
+                                               GET;
+                                               IF_NONE {  }
+                                                       { DIP 4
+                                                             { DUP };
+                                                         DIG 4;
+                                                         PUSH string "SwapIsOver";
+                                                         PAIR;
+                                                         FAILWITH };
                                                DUP;
                                                DIP 4
                                                    { DUP };
