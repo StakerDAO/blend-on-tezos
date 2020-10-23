@@ -84,15 +84,8 @@ confirmSwap parameter = do
     \s -> do
       when (sender /= s #! #sFrom) $ failCustom_ #senderIsNotTheInitiator
       when (s #! #sConfirmed == constExpr True) $ failCustom #swapIsAlreadyConfirmed secretHash
-      setStorageField @s #swaps $ swaps !: (secretHash, some (construct
-        ( s #! #sFrom
-        , s #! #sTo
-        , s #! #sAmount
-        , s #! #sReleaseTime
-        , s #! #sFee
-        , s #! #sSecretHash
-        , constExpr True
-        )))
+      s =: s !! (#sConfirmed, constExpr True)
+      setStorageField @s #swaps $ swaps !: (secretHash, some s)
 
 redeem
   :: forall s sp.
@@ -111,6 +104,8 @@ redeem parameter = do
 
   outcomes <- getStorageField @s #outcomes
   swaps <- getStorageField @s #swaps
+  
+  whenSome (outcomes #: secretHash) $ \_ -> failCustom #swapIsOver secretHash
 
   ifSome (swaps #: secretHash)
     (\s -> do

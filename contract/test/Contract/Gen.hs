@@ -1,10 +1,9 @@
 module Contract.Gen
   ( genByteString
   , genAddress
-  , genSwapId
+  , genSecretHash
   , genOrigParams
   , genLock
-  , genRevealSecretHash
   , genRedeem
   , genLongSecret
   ) where
@@ -20,17 +19,16 @@ import Hedgehog.Gen.Tezos.Crypto (genKeyHash)
 import Hedgehog.Range (singleton)
 import Lorentz (Address)
 import Tezos.Address (Address (..))
-import Tezos.Crypto (sha256)
+import Tezos.Crypto (blake2b)
 
-import Contract.Bridge (LockParams (..), RedeemParams (..), RevealSecretHashParams (..),
-                        SwapId (..))
+import Contract.Bridge (LockParams (..), RedeemParams (..), SecretHash (..))
 import Contract.TestUtil (OrigParams (..))
 
-genLongSecret :: MonadGen m => m (ByteString, ByteString)
+genLongSecret :: MonadGen m => m (ByteString, SecretHash)
 genLongSecret = do
   s <- bytes $ singleton 64
-  let sh = sha256 s
-  pure (s, sh)
+  let sh = blake2b s
+  pure (s, DC.coerce sh)
 
 genByteString :: MonadGen m => m ByteString
 genByteString = bytes $ singleton 32
@@ -38,8 +36,8 @@ genByteString = bytes $ singleton 32
 genAddress :: MonadGen m => m Address
 genAddress = KeyAddress <$> genKeyHash
 
-genSwapId :: MonadGen m => m SwapId
-genSwapId = DC.coerce <$> genByteString
+genSecretHash :: MonadGen m => m SecretHash
+genSecretHash = DC.coerce <$> genByteString
 
 genOrigParams :: MonadGen m => m OrigParams
 genOrigParams = do
@@ -53,26 +51,21 @@ genOrigParams = do
     }
 
 genLock :: MonadGen m => Bool -> Address -> m LockParams
-genLock withSecret to = do
-  swapId <- genSwapId
-  secretHash <- genByteString
+genLock isInitiator to = do
+  secretHash <- genSecretHash
   let ts = maxTimestamp
   pure LockParams
-    { lpId          = DC.coerce swapId
-    , lpTo          = to
+    { lpTo          = to
     , lpAmount      = 100
     , lpReleaseTime = ts
-    , lpSecretHash  = bool Nothing (Just secretHash) withSecret
+    , lpSecretHash  = secretHash
+    , lpFee         = bool Nothing (Just 10) isInitiator
+    , lpConfirmed   = not isInitiator
     }
 
-genRevealSecretHash :: MonadGen m => SwapId -> m RevealSecretHashParams
-genRevealSecretHash rshpId = do
-  rshpSecretHash <- genByteString
-  pure RevealSecretHashParams {..}
-
-genRedeem :: MonadGen m => SwapId -> m (RedeemParams, ByteString)
-genRedeem rpId = do
+genRedeem :: MonadGen m => m (RedeemParams, SecretHash)
+genRedeem = do
   rpSecret <- genByteString
-  let secreteHash = sha256 rpSecret
-  pure (RedeemParams {..}, secreteHash)
+  let secreteHash = blake2b rpSecret
+  pure (RedeemParams {..}, DC.coerce secreteHash)
 

@@ -15,7 +15,7 @@ import Lorentz (Address, unBigMap)
 import Lorentz.Test (TestError (..))
 
 import Contract.BlndOnTezos (Storage (..))
-import Contract.Bridge (BridgeStorage (..), Outcome, Swap, SwapId)
+import Contract.Bridge (BridgeStorage (..), Outcome, SecretHash, Swap)
 import Contract.Token (LedgerValue, ManagedLedgerStorage (..))
 import Data.Map (lookup)
 
@@ -48,9 +48,9 @@ getLedger = unBigMap . mlsLedger . sToken
 getTotalSupply :: Storage -> Natural
 getTotalSupply = mlsTotalSupply . sToken
 
-getSwaps :: Storage -> Map SwapId Swap
+getSwaps :: Storage -> Map SecretHash Swap
 getSwaps = unBigMap . sSwaps . sBridge
 
-getOutcomes :: Storage -> Map SwapId Outcome
+getOutcomes :: Storage -> Map SecretHash Outcome
 getOutcomes = unBigMap . sOutcomes . sBridge
 

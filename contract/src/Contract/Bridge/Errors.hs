@@ -20,6 +20,8 @@ type instance ErrorArg "swapIsNotConfirmed" = SecretHash
 
 type instance ErrorArg "fundsLock" = Timestamp
 
+type instance ErrorArg "swapIsOver" = SecretHash
+
 instance Buildable (CustomError "swapLockAlreadyExists") where
   build (CustomError _ secretHash) =
     "Swap lock with " +| secretHash |+ " id already exists"
@@ -48,6 +50,10 @@ instance Buildable (CustomError "swapIsNotConfirmed") where
 instance Buildable (CustomError "fundsLock") where
   build (CustomError _ ts) =
     "Funds are still lock and swap will end at " +| ts |+ "."
+
+instance Buildable (CustomError "swapIsOver") where
+  build (CustomError _ ts) =
+    "Swap was ended at " +| ts |+ "."
 
 instance CustomErrorHasDoc "swapLockAlreadyExists" where
   customErrClass = ErrClassActionException
@@ -88,4 +94,10 @@ instance CustomErrorHasDoc "fundsLock" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
     "Funds are still lock"
+  customErrArgumentSemantics = Just "timestamp"
+
+instance CustomErrorHasDoc "swapIsOver" where
+  customErrClass = ErrClassActionException
+  customErrDocMdCause =
+    "Swap time is over"
   customErrArgumentSemantics = Just "timestamp"

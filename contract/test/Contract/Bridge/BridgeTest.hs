@@ -7,7 +7,7 @@ import Prelude
 import Data.Map (lookup, (!))
 import Hedgehog (forAll)
 import Hedgehog.Gen.Tezos.Core (maxTimestamp, minTimestamp)
-import Lorentz (arg, mkView, mt)
+import Lorentz (arg, mkView)
 import Lorentz.Test (contractConsumer, expectError, lCallDef, lExpectCustomError,
                      lExpectCustomError_, lExpectStorage, lExpectViewConsumerStorage,
                      lOriginateEmpty, withSender)
@@ -16,10 +16,10 @@ import Test.Tasty.Hedgehog (testProperty)
 import Util.Named ((.!))
 
 import Contract.BlndOnTezos (Parameter (..), Storage (..))
-import Contract.Bridge (ClaimRefundParams (..), LockParams (..), Outcome (..), RedeemParams (..),
-                        RevealSecretHashParams (..), Swap (..), TooLongSecretError (..))
+import Contract.Bridge (ClaimRefundParams (..), ConfirmSwapParams (..), LockParams (..),
+                        Outcome (..), RedeemParams (..), Swap (..), TooLongSecretError (..))
 import qualified Contract.Bridge.Impl as CB
-import Contract.Gen (genLock, genLongSecret, genRedeem, genRevealSecretHash, genSwapId)
+import Contract.Gen (genLock, genLongSecret, genRedeem, genSecretHash)
 import Contract.TestSetup (integrationalTestContract, withBridgeContractP)
 import Contract.TestUtil (OrigParams (..), checkThat, getLedger, getOutcomes, getSwaps,
                           getTotalSupply, lookupE, shouldBe)
@@ -27,39 +27,41 @@ import Contract.TestUtil (OrigParams (..), checkThat, getLedger, getOutcomes, ge
 test_Bridge :: [TestTree]
 test_Bridge =
   [ testGroup "Lock entrypoint"
-    [ testProperty "Lock with secret hash" $
+    [ testProperty "Initiator lock" $
         withBridgeContractP 10 $ \contractM OrigParams{..} -> do
           lock@LockParams{..} <- forAll $ genLock True opBob
           integrationalTestContract contractM $ \c -> do
-            withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
+            withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
             lExpectStorage @Storage c $ \st -> do
               (arg #balance -> actualBalance) <- lookupE opAlice $ getLedger st
-              actualSwap <- lookupE lpId $ getSwaps st
-              actualOutcome <- lookupE lpId $ getOutcomes st
-              actualTotalSupply <- pure $ getTotalSupply st
+              actualSwap <- lookupE lpSecretHash $ getSwaps st
+              let actualTotalSupply = getTotalSupply st
               checkThat "Total supply didn't schanged" $
                 actualTotalSupply `shouldBe` 2000
               checkThat "Balance was locked for sender" $
-                actualBalance `shouldBe` (opBalances ! opAlice - 100)
+                actualBalance `shouldBe` (opBalances ! opAlice - 110)
               checkThat "Swap match lock params" $
                 actualSwap `shouldBe` Swap
                   { sFrom        = opAlice
                   , sTo          = opBob
                   , sAmount      = lpAmount
                   , sReleaseTime = lpReleaseTime
+                  , sFee         = lpFee
+                  , sSecretHash  = lpSecretHash
+                  , sConfirmed   = lpConfirmed
                   }
-              checkThat "Outcome match lock params" $
-                actualOutcome `shouldBe` HashRevealed (fromMaybe "" lpSecretHash)
+              checkThat "Outcome doesn't exists" $
+                lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
 
-    , testProperty "Lock without secret hash" $
+    , testProperty "Not initiator lock" $
         withBridgeContractP 10 $ \contractM OrigParams{..} -> do
           lock@LockParams{..} <- forAll $ genLock False opBob
           integrationalTestContract contractM $ \c -> do
-            withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
+            withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
             lExpectStorage @Storage c $ \st -> do
               (arg #balance -> actualBalance) <- lookupE opAlice $ getLedger st
-              actualSwap <- lookupE lpId $ getSwaps st
-              actualTotalSupply <- pure $ getTotalSupply st
+              actualSwap <- lookupE lpSecretHash $ getSwaps st
+              let actualTotalSupply = getTotalSupply st
               checkThat "Total supply didn't schanged" $
                 actualTotalSupply `shouldBe` 2000
               checkThat "Balance was locked for sender" $
@@ -70,257 +72,230 @@ test_Bridge =
                   , sTo          = opBob
                   , sAmount      = lpAmount
                   , sReleaseTime = lpReleaseTime
+                  , sFee         = lpFee
+                  , sSecretHash  = lpSecretHash
+                  , sConfirmed   = lpConfirmed
                   }
               checkThat "Outcome doesn't exists" $
-                lookup lpId (getOutcomes st) `shouldBe` Nothing
+                lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
 
     , testProperty "Lock with amount greater then locker balance failed" $
         withBridgeContractP 10 $ \contractM OrigParams{..} -> do
           gLock <- forAll $ genLock False opBob
           let lock@LockParams{..} = gLock{lpAmount = 3000}
           integrationalTestContract contractM $ \c -> do
-            err <- expectError $ withSender opAlice $ lCallDef c $ Bridge $ CB.Lock $ lock
+            err <- expectError $ withSender opAlice $ lCallDef c $ Bridge $ CB.Lock lock
             lExpectCustomError #notEnoughBalance (#required .! 3000, #present .! 1000) err
 
     , testProperty "Lock with the same swap id fails" $
         withBridgeContractP 10 $ \contractM OrigParams{..} -> do
           lock@LockParams{..} <- forAll $ genLock False opBob
           integrationalTestContract contractM $ \c -> do
-            withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-            err <- expectError $ withSender opAlice $ lCallDef c $ Bridge $ CB.Lock $ lock
-            lExpectCustomError #swapLockAlreadyExists lpId err
+            withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+            err <- expectError $ withSender opAlice $ lCallDef c $ Bridge $ CB.Lock lock
+            lExpectCustomError #swapLockAlreadyExists lpSecretHash err
     ]
 
-  , testGroup "Reveal secret hash entrypoint"
-      [ testProperty "Reveal secret hash set the hash" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock False opBob
-            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash lpId
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              lExpectStorage @Storage c $ \st -> do
-                checkThat "Outcome doesn't exists" $
-                  lookup lpId (getOutcomes st) `shouldBe` Nothing
-              withSender opAlice . lCallDef c $ Bridge $ CB.RevealSecretHash $ rsh
-              lExpectStorage @Storage c $ \st -> do
-                actualOutcome <- lookupE lpId $ getOutcomes st
-                checkThat "Outcome exists and contains secret hash" $
-                  actualOutcome `shouldBe` HashRevealed rshpSecretHash
-
-      , testProperty "Reveal secret hash fails if swap doesn't exists" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            swapId <- forAll $ genSwapId
-            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash swapId
-            integrationalTestContract contractM $ \c -> do
-              err <- expectError $ withSender opAlice . lCallDef c $
-                Bridge $ CB.RevealSecretHash $ rsh
-              lExpectCustomError #swapLockDoesNotExist rshpId err
-
-      , testProperty "Reveal secret hash fails if sender is not the initiator" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock False opBob
-            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash lpId
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              lExpectStorage @Storage c $ \st -> do
-                checkThat "Outcome doesn't exists" $
-                  lookup lpId (getOutcomes st) `shouldBe` Nothing
-              err <- expectError $ withSender opBob . lCallDef c $
-                Bridge $ CB.RevealSecretHash $ rsh
-              lExpectCustomError_ #senderIsNotTheInitiator err
-
-      , testProperty "Reveal secret hash fails if hash exists" $
+  , testGroup "Confirm swap entrypoint"
+      [ testProperty "Confirm swap confirm the swap" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
             lock@LockParams{..} <- forAll $ genLock True opBob
-            rsh@RevealSecretHashParams{..} <- forAll $ genRevealSecretHash lpId
+            let confirmSwapParams = ConfirmSwapParams lpSecretHash
             integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              lExpectStorage @Storage c $ \st -> do
+                checkThat "Outcome doesn't exists" $
+                  lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
+              withSender opAlice . lCallDef c $ Bridge $ CB.ConfirmSwap confirmSwapParams
+              lExpectStorage @Storage c $ \st -> do
+                actualSwap <- lookupE lpSecretHash $ getSwaps st
+                checkThat "Swap confirmed" $
+                  actualSwap `shouldBe` Swap
+                    { sFrom        = opAlice
+                    , sTo          = opBob
+                    , sAmount      = lpAmount
+                    , sReleaseTime = lpReleaseTime
+                    , sFee         = lpFee
+                    , sSecretHash  = lpSecretHash
+                    , sConfirmed   = True
+                    }
+
+      , testProperty "Confirm swap fails if swap doesn't exists" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            secretHash <- forAll genSecretHash
+            let confirmSwapParams = ConfirmSwapParams secretHash
+            integrationalTestContract contractM $ \c -> do
               err <- expectError $ withSender opAlice . lCallDef c $
-                Bridge $ CB.RevealSecretHash $ rsh
-              lExpectCustomError #secretHashIsAlreadySet lpId err
+                Bridge $ CB.ConfirmSwap confirmSwapParams
+              lExpectCustomError #swapLockDoesNotExist secretHash err
+
+      , testProperty "Confirm swap if sender is not the initiator" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock True opBob
+            let confirmSwapParams = ConfirmSwapParams lpSecretHash
+            integrationalTestContract contractM $ \c -> do
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              lExpectStorage @Storage c $ \st -> do
+                checkThat "Outcome doesn't exists" $
+                  lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
+              err <- expectError $ withSender opBob . lCallDef c $
+                Bridge $ CB.ConfirmSwap confirmSwapParams
+              lExpectCustomError_ #senderIsNotTheInitiator err
+
+      , testProperty "Confirm swap fails if swap was already confirmed" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock True opBob
+            let confirmSwapParams = ConfirmSwapParams lpSecretHash
+            integrationalTestContract contractM $ \c -> do
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              withSender opAlice . lCallDef c $ Bridge $ CB.ConfirmSwap confirmSwapParams
+              err <- expectError $ withSender opAlice . lCallDef c $
+                Bridge $ CB.ConfirmSwap confirmSwapParams
+              lExpectCustomError #swapIsAlreadyConfirmed lpSecretHash err
       ]
 
   , testGroup "Redeem entrypoint"
-      [ testProperty "Redeem works" $
+      [ testProperty "Redeem works for non initiator" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
             gLock <- forAll $ genLock True opBob
-            (redeem@RedeemParams{..}, sh) <- forAll $ genRedeem $ lpId gLock
-            let lock@LockParams{..} = gLock {lpSecretHash = Just sh}
+            (redeem@RedeemParams{..}, sh) <- forAll genRedeem
+            let lock@LockParams{..} = gLock {lpSecretHash = sh}
+            let confirmSwapParams = ConfirmSwapParams lpSecretHash
             integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              withSender opAlice . lCallDef c $ Bridge $ CB.ConfirmSwap confirmSwapParams
+              withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
               lExpectStorage @Storage c $ \st -> do
-                actualOutcome <- lookupE lpId $ getOutcomes st
-                (arg #balance -> actualBalance) <- lookupE opBob $ getLedger st
-                actualTotalSupply <- pure $ getTotalSupply st
+                actualOutcome <- lookupE lpSecretHash $ getOutcomes st
+                (arg #balance -> actualBobBalance) <- lookupE opBob $ getLedger st
+                let actualTotalSupply = getTotalSupply st
                 checkThat "Outcome secret revealed" $
-                  actualOutcome `shouldBe` SecretRevealed rpSecret
+                  actualOutcome `shouldBe` Outcome rpSecret
                 checkThat "Total supply didn't schanged" $
                   actualTotalSupply `shouldBe` 2000
-                checkThat "Balance was locked for sender" $
-                  actualBalance `shouldBe` (opBalances ! opBob + 100)
+                checkThat "Bob balance changed" $
+                  actualBobBalance `shouldBe` (opBalances ! opBob + 110)
+
+      , testProperty "Redeem works for non initiator" $
+          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock False opBob
+            (redeem@RedeemParams{..}, sh) <- forAll genRedeem
+            let lock@LockParams{..} = gLock {lpSecretHash = sh}
+            integrationalTestContract contractM $ \c -> do
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
+              lExpectStorage @Storage c $ \st -> do
+                actualOutcome <- lookupE lpSecretHash $ getOutcomes st
+                (arg #balance -> actualBobBalance) <- lookupE opBob $ getLedger st
+                let actualTotalSupply = getTotalSupply st
+                checkThat "Outcome secret revealed" $
+                  actualOutcome `shouldBe` Outcome rpSecret
+                checkThat "Total supply didn't schanged" $
+                  actualTotalSupply `shouldBe` 2000
+                checkThat "Bob balance changed" $
+                  actualBobBalance `shouldBe` (opBalances ! opBob + 100)
 
       , testProperty "Redeem fails with long secret" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
             gLock <- forAll $ genLock True opBob
-            (gRedeem, _) <- forAll $ genRedeem $ lpId gLock
+            (gRedeem, _) <- forAll genRedeem
             (s, sh) <- forAll genLongSecret
-            let lock@LockParams{..} = gLock {lpSecretHash = Just sh}
+            let lock@LockParams{..} = gLock {lpSecretHash = sh}
                 redeem@RedeemParams{..} = gRedeem {rpSecret = s}
             integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
               lExpectCustomError #tooLongSecret (TooLongSecretError 32 64) err
 
       , testProperty "Redeem fails if swap doesn't exists" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
             LockParams{..} <- forAll $ genLock False opBob
-            (redeem@RedeemParams{..}, _) <- forAll $ genRedeem lpId
+            (redeem@RedeemParams{..}, sh) <- forAll genRedeem
             integrationalTestContract contractM $ \c -> do
-              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError #swapLockDoesNotExist lpId err
-
-      , testProperty "Redeem fails if swap is over" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock True opBob
-            (redeem@RedeemParams{..}, sh) <- forAll $ genRedeem $ lpId gLock
-            let lock@LockParams{..} = gLock {lpSecretHash = Just sh, lpReleaseTime = minTimestamp}
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError #swapIsOver minTimestamp err
-
-      , testProperty "Redeem fails if outcome doesn't exists" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock False opBob
-            (redeem@RedeemParams{..}, _) <- forAll $ genRedeem lpId
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError #swapLockDoesNotExist lpId err
-
-      , testProperty "Redeem fails with invalid secret" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock True opBob
-            (redeem@RedeemParams{..}, _) <- forAll $ genRedeem lpId
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError_ #invalidSecret err
+              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
+              lExpectCustomError #swapLockDoesNotExist sh err
 
       , testProperty "Redeem fails if swap was finished" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
             gLock <- forAll $ genLock False opBob
-            (redeem@RedeemParams{..}, sh) <- forAll $ genRedeem $ lpId gLock
-            let lock@LockParams{..} = gLock {lpSecretHash = Just sh}
+            (redeem@RedeemParams{..}, sh) <- forAll genRedeem
+            let lock@LockParams{..} = gLock {lpSecretHash = sh}
             integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError #wrongOutcomeStatus [mt|SecretRevealed|] err
-
-      , testProperty "Redeem fails if swap was refunded" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock False opBob
-            (redeem@RedeemParams{..}, sh) <- forAll $ genRedeem $ lpId gLock
-            let lock@LockParams{..} = gLock {lpSecretHash = Just sh, lpReleaseTime = minTimestamp}
-                refund = ClaimRefundParams lpId
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              withSender opAlice . lCallDef c $ Bridge $ CB.ClaimRefund $ refund
-              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              lExpectCustomError #wrongOutcomeStatus [mt|Refunded|] err
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
+              err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
+              lExpectCustomError #swapIsOver lpSecretHash err
       ]
 
   , testGroup "Refund entrypoint"
       [ testProperty "Refund works" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
             gLock <- forAll $ genLock True opBob
-            let refund = ClaimRefundParams lpId
+            let refund = ClaimRefundParams lpSecretHash
                 lock@LockParams{..} = gLock {lpReleaseTime = minTimestamp}
             integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              withSender opAlice . lCallDef c $ Bridge $ CB.ClaimRefund $ refund
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              withSender opAlice . lCallDef c $ Bridge $ CB.ClaimRefund refund
               lExpectStorage @Storage c $ \st -> do
-                actualOutcome <- lookupE lpId $ getOutcomes st
-                (arg #balance -> actualBalance) <- lookupE opAlice $ getLedger st
-                actualTotalSupply <- pure $ getTotalSupply st
-                checkThat "Outcome secret revealed" $
-                  actualOutcome `shouldBe` Refunded ()
+                (arg #balance -> actualAliceBalance) <- lookupE opAlice $ getLedger st
+                (arg #balance -> actualBobBalance) <- lookupE opBob $ getLedger st
+                let actualTotalSupply = getTotalSupply st
+                checkThat "Outcome doesn't exists" $
+                  lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
                 checkThat "Total supply didn't schanged" $
                   actualTotalSupply `shouldBe` 2000
-                checkThat "Balance was locked for sender" $
-                  actualBalance `shouldBe` (opBalances ! opAlice)
+                checkThat "Alice balance changed" $
+                  actualAliceBalance `shouldBe` (opBalances ! opAlice - 10)
+                checkThat "Bob balance changed" $
+                  actualBobBalance `shouldBe` (opBalances ! opBob + 10)
 
       , testProperty "Refund fails if swap doesn't exists" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            swapId <- forAll genSwapId
-            let refund = ClaimRefundParams swapId
+            secretHash <- forAll genSecretHash
+            let refund = ClaimRefundParams secretHash
             integrationalTestContract contractM $ \c -> do
               err <- expectError $ withSender opAlice . lCallDef c $
-                Bridge $ CB.ClaimRefund $ refund
-              lExpectCustomError #swapLockDoesNotExist swapId err
+                Bridge $ CB.ClaimRefund refund
+              lExpectCustomError #swapLockDoesNotExist secretHash err
 
       , testProperty "Refund fails if swap is not over" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
             gLock <- forAll $ genLock True opBob
-            let refund = ClaimRefundParams lpId
+            let refund = ClaimRefundParams lpSecretHash
                 lock@LockParams{..} = gLock {lpReleaseTime = maxTimestamp}
             integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
               err <- expectError $ withSender opAlice . lCallDef c $
-                Bridge $ CB.ClaimRefund $ refund
+                Bridge $ CB.ClaimRefund refund
               lExpectCustomError #fundsLock maxTimestamp err
-
-      , testProperty "Refund fails if swap was already refunded" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock True opBob
-            let refund = ClaimRefundParams lpId
-                lock@LockParams{..} = gLock {lpReleaseTime = minTimestamp}
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              withSender opAlice . lCallDef c $ Bridge $ CB.ClaimRefund $ refund
-              err <- expectError $ withSender opAlice . lCallDef c $
-                Bridge $ CB.ClaimRefund $ refund
-              lExpectCustomError #wrongOutcomeStatus [mt|Refunded|] err
-
-      , testProperty "Refund fails if swap was finished" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock True opBob
-            (redeem@RedeemParams{..}, sh) <- forAll $ genRedeem $ lpId gLock
-            let lock@LockParams{..} = gLock {lpSecretHash = Just sh}
-                refund = ClaimRefundParams lpId
-            integrationalTestContract contractM $ \c -> do
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              withSender opBob . lCallDef c $ Bridge $ CB.Redeem $ redeem
-              err <- expectError $ withSender opAlice . lCallDef c $
-                Bridge $ CB.ClaimRefund $ refund
-              lExpectCustomError #wrongOutcomeStatus [mt|SecretRevealed|] err
       ]
 
   , testGroup "View entrypoints"
       [ testProperty "Get swap and outcome" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock True opBob
+            gLock <- forAll $ genLock False opBob
+            (redeem@RedeemParams{..}, sh) <- forAll genRedeem
+            let lock@LockParams{..} = gLock {lpSecretHash = sh}
             integrationalTestContract contractM $ \c -> do
               swapConsumer <- lOriginateEmpty @(Maybe Swap) contractConsumer "consumer"
               outcomeConsumer <- lOriginateEmpty @(Maybe Outcome) contractConsumer "consumer"
-              withSender opAlice . lCallDef c $ Bridge $ CB.Lock $ lock
-              lCallDef c $ Bridge $ CB.GetSwap $ mkView lpId swapConsumer
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              lCallDef c $ Bridge $ CB.GetSwap $ mkView lpSecretHash swapConsumer
               lExpectViewConsumerStorage swapConsumer
                 [ Just Swap
                   { sFrom        = opAlice
                   , sTo          = opBob
                   , sAmount      = lpAmount
                   , sReleaseTime = lpReleaseTime
+                  , sFee         = lpFee
+                  , sSecretHash  = lpSecretHash
+                  , sConfirmed   = lpConfirmed
                   }
                 ]
-              lCallDef c $ Bridge $ CB.GetOutcome $ mkView lpId outcomeConsumer
+              withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
+              lCallDef c $ Bridge $ CB.GetOutcome $ mkView lpSecretHash outcomeConsumer
               lExpectViewConsumerStorage outcomeConsumer
-                [ Just $ HashRevealed $ fromMaybe "" lpSecretHash
+                [ Just $ Outcome rpSecret
                 ]
       ]
   ]
-
--- Get Swap
--- Get Outcome
