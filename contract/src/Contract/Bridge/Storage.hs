@@ -6,11 +6,11 @@ module Contract.Bridge.Storage
 
 import Indigo
 
-import Contract.Bridge.Types (Outcome, Swap, SwapId)
+import Contract.Bridge.Types (Outcome, SecretHash, Swap)
 
 data BridgeStorage = BridgeStorage
-  { sSwaps    :: BigMap SwapId Swap
-  , sOutcomes :: BigMap SwapId Outcome
+  { sSwaps    :: BigMap SecretHash Swap
+  , sOutcomes :: BigMap SecretHash Outcome
   } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
@@ -21,8 +21,8 @@ mkStorage = BridgeStorage
   }
 
 type HasBridge s =
-  ( HasField s "swaps" (BigMap SwapId Swap)
-  , HasField s "outcomes" (BigMap SwapId Outcome)
+  ( HasField s "swaps" (BigMap SecretHash Swap)
+  , HasField s "outcomes" (BigMap SecretHash Outcome)
   , HasStorage s
   , IsObject s
   )
@@ -32,8 +32,8 @@ instance TypeHasDoc BridgeStorage where
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
    '[ '( "BridgeStorage", '( 'Nothing,
-         '[ '("sSwaps", "Container with all swaps.")
-          , '("sOutcomes", "Container with results of each swap.")
+         '[ '("sSwaps", "Container with all current swaps.")
+          , '("sOutcomes", "Container with received secrets of each swap.")
           ])
        )
     ]
@@ -42,8 +42,8 @@ instance HasFieldOfType BridgeStorage name field =>
          StoreHasField BridgeStorage name field where
   storeFieldOps = storeFieldOpsADT
 
-instance HasField BridgeStorage "swaps" (BigMap SwapId Swap) where
+instance HasField BridgeStorage "swaps" (BigMap SecretHash Swap) where
   fieldLens = fieldLensADT #sSwaps
 
-instance HasField BridgeStorage "outcomes" (BigMap SwapId Outcome) where
+instance HasField BridgeStorage "outcomes" (BigMap SecretHash Outcome) where
   fieldLens = fieldLensADT #sOutcomes

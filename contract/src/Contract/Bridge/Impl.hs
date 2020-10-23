@@ -7,13 +7,13 @@ import Indigo
 
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridge)
-import Contract.Bridge.Types (ClaimRefundParams, GetOutcomeParams, GetSwapParams, LockParams,
-                              Outcome (..), RedeemParams, RevealSecretHashParams)
+import Contract.Bridge.Types (ClaimRefundParams, ConfirmSwapParams, GetOutcomeParams, GetSwapParams,
+                              LockParams, RedeemParams)
 import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
 
 data Parameter
   = Lock LockParams
-  | RevealSecretHash RevealSecretHashParams
+  | ConfirmSwap ConfirmSwapParams
   | Redeem RedeemParams
   | ClaimRefund ClaimRefundParams
   | GetSwap GetSwapParams
@@ -34,12 +34,12 @@ entrypoints
   => IndigoEntrypoint param
 entrypoints param = do
   entryCaseSimple param
-    ( #cLock  //-> lock @storage
-    , #cRevealSecretHash //-> revealSecretHash @storage
-    , #cRedeem //-> redeem @storage
-    , #cClaimRefund //-> claimRefund @storage
-    , #cGetSwap //-> getSwap @storage
-    , #cGetOutcome //-> getOutcome @storage
+    ( #cLock  #= lock @storage
+    , #cConfirmSwap #= confirmSwap @storage
+    , #cRedeem #= redeem @storage
+    , #cClaimRefund #= claimRefund @storage
+    , #cGetSwap #= getSwap @storage
+    , #cGetOutcome #= getOutcome @storage
     )
 
 lock
@@ -51,41 +51,48 @@ lock
   => IndigoEntrypoint sp
 lock parameter = do
   swaps <- getStorageField @s #swaps
-  swapId <- new$ parameter #! #lpId
-  whenSome (swaps #: swapId) $ \_ -> failCustom #swapLockAlreadyExists swapId
+  secretHash <- new$ parameter #! #lpSecretHash
+  whenSome (swaps #: secretHash) $ \_ -> failCustom #swapLockAlreadyExists secretHash
 
-  debitFrom @s sender $ parameter #! #lpAmount
+  fee <- ifSome (parameter #! #lpFee) (\f -> new$ f) (new$ 0 nat)
+  debitFrom @s sender $ parameter #! #lpAmount + fee
 
-  outcomes <- getStorageField @s #outcomes
-  setStorageField @s #swaps $ swaps +: (swapId, construct
+  confirmed <- ifSome (parameter #! #lpFee) (\_ -> new$ False) (new$ True)
+
+  setStorageField @s #swaps $ swaps +: (secretHash, construct
     ( sender
     , parameter #! #lpTo
     , parameter #! #lpAmount
     , parameter #! #lpReleaseTime
+    , parameter #! #lpFee
+    , parameter #! #lpSecretHash
+    , varExpr confirmed
     ))
 
-  whenSome (parameter #! #lpSecretHash) $ \hash ->
-    setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cHashRevealed hash)
-
-revealSecretHash
+confirmSwap
   :: forall s sp.
-     ( sp :~> RevealSecretHashParams
+     ( sp :~> ConfirmSwapParams
      , HasBridge s
      )
   => IndigoEntrypoint sp
-revealSecretHash parameter = do
+confirmSwap parameter = do
   swaps <- getStorageField @s #swaps
-  swapId <- new$ parameter #! #rshpId
+  secretHash <- new$ parameter #! #cspSecretHash
 
-  ifNone (swaps #: swapId)
-    (void $ failCustom #swapLockDoesNotExist swapId) $
-    \s -> when (sender /= (s #! #sFrom)) $ failCustom_ #senderIsNotTheInitiator
-
-  outcomes <- getStorageField @s #outcomes
-  whenSome (outcomes #: swapId) $ \_ -> failCustom #secretHashIsAlreadySet swapId
-
-  setStorageField @s #outcomes $ outcomes +:
-    (swapId, wrap #cHashRevealed $ parameter #! #rshpSecretHash)
+  ifNone (swaps #: secretHash)
+    (void $ failCustom #swapLockDoesNotExist secretHash) $
+    \s -> do
+      when (sender /= s #! #sFrom) $ failCustom_ #senderIsNotTheInitiator
+      when (s #! #sConfirmed == constExpr True) $ failCustom #swapIsAlreadyConfirmed secretHash
+      setStorageField @s #swaps $ swaps !: (secretHash, some (construct
+        ( s #! #sFrom
+        , s #! #sTo
+        , s #! #sAmount
+        , s #! #sReleaseTime
+        , s #! #sFee
+        , s #! #sSecretHash
+        , constExpr True
+        )))
 
 redeem
   :: forall s sp.
@@ -95,35 +102,27 @@ redeem
      )
   => IndigoEntrypoint sp
 redeem parameter = do
-  swapId <- new$ parameter #! #rpId
-
   secret <- new$ parameter #! #rpSecret
+  secretHash <- new$ construct $ blake2b secret
+
   maxSecretLength <- new$ 32 nat -- TODO now const but maybe make it configurable
   when (size secret > maxSecretLength) $
     failCustom #tooLongSecret $ construct (varExpr maxSecretLength, size secret)
 
   outcomes <- getStorageField @s #outcomes
-  ifSome (outcomes #: swapId)
-    (\o -> case_ o
-      ( #cRefunded //->
-          \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
-      , #cHashRevealed //->
-          \secretHash -> when (sha256 secret /= secretHash) $ failCustom_ #invalidSecret
-      , #cSecretRevealed //->
-          \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
-      )
-    )
-    (void $ failCustom #swapLockDoesNotExist swapId)
-
   swaps <- getStorageField @s #swaps
 
-  ifSome (swaps #: swapId)
+  ifSome (swaps #: secretHash)
     (\s -> do
-       when (now >= s #! #sReleaseTime) $ failCustom #swapIsOver $ s #! #sReleaseTime
-       setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cSecretRevealed secret)
-       creditTo @s (s #! #sTo) (s #! #sAmount)
+       unless (s #! #sConfirmed) $ failCustom #swapIsNotConfirmed secretHash
+
+       fee <- ifSome (s #! #sFee) (\f -> new$ f) (new$ 0 nat)
+       creditTo @s (s #! #sTo) (s #! #sAmount + fee)
+
+       setStorageField @s #outcomes $ outcomes +: (secretHash, construct $ varExpr secret)
+       setStorageField @s #swaps $ swaps -: secretHash
     )
-    (void $ failCustom #swapLockDoesNotExist swapId)
+    (void $ failCustom #swapLockDoesNotExist secretHash)
 
 claimRefund
   :: forall s sp.
@@ -133,27 +132,19 @@ claimRefund
      )
   => IndigoEntrypoint sp
 claimRefund parameter = do
-  swapId <- new$ parameter #! #crpId
-  outcomes <- getStorageField @s #outcomes
-
-  ifSome (outcomes #: swapId)
-    (\o -> case_ o
-      ( #cRefunded //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
-      , #cHashRevealed //-> \_ -> pass
-      , #cSecretRevealed //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
-      )
-    )
-    $ pass
-
+  secretHash <- new$ parameter #! #crpSecretHash
   swaps <- getStorageField @s #swaps
-
-  ifSome (swaps #: swapId)
+  ifSome (swaps #: secretHash)
     (\s -> do
        when (now < s #! #sReleaseTime) $ failCustom #fundsLock $ s #! #sReleaseTime
-       setStorageField @s #outcomes $ outcomes +: (swapId, Refunded ())
+
+       fee <- ifSome (s #! #sFee) (\f -> new$ f) (new$ 0 nat)
+       creditTo @s (s #! #sTo) fee
        creditTo @s (s #! #sFrom) (s #! #sAmount)
+
+       setStorageField @s #swaps $ swaps -: secretHash
     )
-    (void $ failCustom #swapLockDoesNotExist swapId)
+    (void $ failCustom #swapLockDoesNotExist secretHash)
 
 getSwap
   :: forall s sp.

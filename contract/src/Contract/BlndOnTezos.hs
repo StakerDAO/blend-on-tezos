@@ -66,10 +66,10 @@ instance HasField Storage "paused" Bool where
 instance HasField Storage "totalSupply" Natural where
   fieldLens = fieldLensDeeper #sToken
 
-instance HasField Storage "swaps" (BigMap Bridge.SwapId Bridge.Swap) where
+instance HasField Storage "swaps" (BigMap Bridge.SecretHash Bridge.Swap) where
   fieldLens = fieldLensDeeper #sBridge
 
-instance HasField Storage "outcomes" (BigMap Bridge.SwapId Bridge.Outcome) where
+instance HasField Storage "outcomes" (BigMap Bridge.SecretHash Bridge.Outcome) where
   fieldLens = fieldLensDeeper #sBridge
 
 blndOnTezosIndigo :: IndigoContract Parameter Storage
@@ -80,8 +80,8 @@ blndOnTezosIndigo param = contractName "BLND on Tezos" do
     "This documentation describes a smart contract which implements \
     \FA1.2 interface and network bridge."
   case_ param
-    ( #cToken //-> Token.entrypoints @Storage
-    , #cBridge //-> Bridge.entrypoints @Storage
+    ( #cToken #= Token.entrypoints @Storage
+    , #cBridge #= Bridge.entrypoints @Storage
     )
 
 blndOnTezosContract :: Contract Parameter Storage

@@ -23,7 +23,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [mint](#entrypoints-mint)
   - [burn](#entrypoints-burn)
   - [lock](#entrypoints-lock)
-  - [revealSecretHash](#entrypoints-revealSecretHash)
+  - [confirmSwap](#entrypoints-confirmSwap)
   - [redeem](#entrypoints-redeem)
   - [claimRefund](#entrypoints-claimRefund)
   - [getSwap](#entrypoints-getSwap)
@@ -41,6 +41,7 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [BridgeStorage](#types-BridgeStorage)
   - [ByteString](#types-ByteString)
   - [ClaimRefundParams](#types-ClaimRefundParams)
+  - [ConfirmSwapParams](#types-ConfirmSwapParams)
   - [Contract](#types-Contract)
   - [Integer](#types-Integer)
   - [LockParams](#types-LockParams)
@@ -50,9 +51,8 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [Natural](#types-Natural)
   - [Outcome](#types-Outcome)
   - [RedeemParams](#types-RedeemParams)
-  - [RevealSecretHashParams](#types-RevealSecretHashParams)
+  - [SecretHash](#types-SecretHash)
   - [Swap](#types-Swap)
-  - [SwapId](#types-SwapId)
   - [Text](#types-Text)
   - [Timestamp](#types-Timestamp)
   - [TooLongSecretError](#types-TooLongSecretError)
@@ -61,19 +61,17 @@ This documentation describes a smart contract which implements FA1.2 interface a
   - [AllowanceMismatch](#errors-AllowanceMismatch)
   - [FundsLock](#errors-FundsLock)
   - [InternalError](#errors-InternalError)
-  - [InvalidSecret](#errors-InvalidSecret)
   - [NotEnoughAllowance](#errors-NotEnoughAllowance)
   - [NotEnoughBalance](#errors-NotEnoughBalance)
-  - [SecretHashIsAlreadySet](#errors-SecretHashIsAlreadySet)
   - [SenderIsNotAdmin](#errors-SenderIsNotAdmin)
   - [SenderIsNotTheInitiator](#errors-SenderIsNotTheInitiator)
-  - [SwapIsOver](#errors-SwapIsOver)
+  - [SwapIsAlreadyConfirmed](#errors-SwapIsAlreadyConfirmed)
+  - [SwapIsNotConfirmed](#errors-SwapIsNotConfirmed)
   - [SwapLockAlreadyExists](#errors-SwapLockAlreadyExists)
   - [SwapLockDoesNotExist](#errors-SwapLockDoesNotExist)
   - [TokenOperationsArePaused](#errors-TokenOperationsArePaused)
   - [TooLongSecret](#errors-TooLongSecret)
   - [UnsafeAllowanceChange](#errors-UnsafeAllowanceChange)
-  - [WrongOutcomeStatus](#errors-WrongOutcomeStatus)
 
 
 
@@ -93,7 +91,7 @@ Managed ledger connected storage.
   * ***bridge*** :[`BridgeStorage`](#types-BridgeStorage)    
 Bridge connected storage.
 
-**Final Michelson representation:** `pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes))))`
+**Final Michelson representation:** `pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address (pair address nat)) (pair (pair timestamp (option nat)) (pair bytes bool)))) (big_map bytes bytes))`
 
 
 
@@ -465,8 +463,8 @@ Destroys the given amount of tokens on the account associated with the given add
 
 **Argument:** 
   + **In Haskell:** [`LockParams`](#types-LockParams)
-  + **In Michelson:** `(pair (pair (bytes %lpId) (address %lpTo)) (pair (nat %lpAmount) (pair (timestamp %lpReleaseTime) (option %lpSecretHash bytes))))`
-    + **Example:** <span id="example-id">`Pair (Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB") (Pair 0 (Pair "2019-07-26T12:09:12Z" (Some 0x0a)))`</span>
+  + **In Michelson:** `(pair (pair (address %lpTo) (pair (nat %lpAmount) (timestamp %lpReleaseTime))) (pair (bytes %lpSecretHash) (pair (option %lpFee nat) (bool %lpConfirmed))))`
+    + **Example:** <span id="example-id">`Pair (Pair "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB" (Pair 0 "2019-07-26T12:09:12Z")) (Pair 0x0a (Pair (Some 0) True))`</span>
 
 <details>
   <summary><b>How to call this entrypoint</b></summary>
@@ -485,22 +483,22 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
-<a name="entrypoints-revealSecretHash"></a>
+<a name="entrypoints-confirmSwap"></a>
 
 ---
 
-### `revealSecretHash`
+### `confirmSwap`
 
 **Argument:** 
-  + **In Haskell:** [`RevealSecretHashParams`](#types-RevealSecretHashParams)
-  + **In Michelson:** `(pair (bytes %rshpId) (bytes %rshpSecretHash))`
-    + **Example:** <span id="example-id">`Pair 0x0a 0x0a`</span>
+  + **In Haskell:** [`ConfirmSwapParams`](#types-ConfirmSwapParams)
+  + **In Michelson:** `bytes`
+    + **Example:** <span id="example-id">`0x0a`</span>
 
 <details>
   <summary><b>How to call this entrypoint</b></summary>
 
 0. Construct an argument for the entrypoint.
-1. Call contract's `revealSecretHash` entrypoint passing the constructed argument.
+1. Call contract's `confirmSwap` entrypoint passing the constructed argument.
 </details>
 <p>
 
@@ -511,7 +509,7 @@ Destroys the given amount of tokens on the account associated with the given add
 
 * [`SenderIsNotTheInitiator`](#errors-SenderIsNotTheInitiator) — Sender is not the initiator of this swap
 
-* [`SecretHashIsAlreadySet`](#errors-SecretHashIsAlreadySet) — Secret hash is already set for swap with certain id
+* [`SwapIsAlreadyConfirmed`](#errors-SwapIsAlreadyConfirmed) — Secret hash is already set for swap with certain id
 
 
 
@@ -523,8 +521,8 @@ Destroys the given amount of tokens on the account associated with the given add
 
 **Argument:** 
   + **In Haskell:** [`RedeemParams`](#types-RedeemParams)
-  + **In Michelson:** `(pair (bytes %rpId) (bytes %rpSecret))`
-    + **Example:** <span id="example-id">`Pair 0x0a 0x0a`</span>
+  + **In Michelson:** `bytes`
+    + **Example:** <span id="example-id">`0x0a`</span>
 
 <details>
   <summary><b>How to call this entrypoint</b></summary>
@@ -541,11 +539,7 @@ Destroys the given amount of tokens on the account associated with the given add
 
 * [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
 
-* [`WrongOutcomeStatus`](#errors-WrongOutcomeStatus) — Not valid outcome status
-
-* [`InvalidSecret`](#errors-InvalidSecret) — Invalid secret hash
-
-* [`SwapIsOver`](#errors-SwapIsOver) — Swap time is over
+* [`SwapIsNotConfirmed`](#errors-SwapIsNotConfirmed) — Swap time is over
 
 
 
@@ -571,8 +565,6 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 **Possible errors:**
-* [`WrongOutcomeStatus`](#errors-WrongOutcomeStatus) — Not valid outcome status
-
 * [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this id does not exists
 
 * [`FundsLock`](#errors-FundsLock) — Funds are still lock
@@ -586,8 +578,8 @@ Destroys the given amount of tokens on the account associated with the given add
 ### `getSwap`
 
 **Argument:** 
-  + **In Haskell:** [`View`](#types-View) [`SwapId`](#types-SwapId) ([`Maybe`](#types-Maybe) [`Swap`](#types-Swap))
-  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option (pair (pair (address %sFrom) (address %sTo)) (pair (nat %sAmount) (timestamp %sReleaseTime))))))`
+  + **In Haskell:** [`View`](#types-View) [`SecretHash`](#types-SecretHash) ([`Maybe`](#types-Maybe) [`Swap`](#types-Swap))
+  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option (pair (pair (address %sFrom) (pair (address %sTo) (nat %sAmount))) (pair (pair (timestamp %sReleaseTime) (option %sFee nat)) (pair (bytes %sSecretHash) (bool %sConfirmed)))))))`
     + **Example:** <span id="example-id">`Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB"`</span>
 
 <details>
@@ -609,8 +601,8 @@ Destroys the given amount of tokens on the account associated with the given add
 ### `getOutcome`
 
 **Argument:** 
-  + **In Haskell:** [`View`](#types-View) [`SwapId`](#types-SwapId) ([`Maybe`](#types-Maybe) [`Outcome`](#types-Outcome))
-  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option (or (unit %refunded) (or (bytes %hashRevealed) (bytes %secretRevealed))))))`
+  + **In Haskell:** [`View`](#types-View) [`SecretHash`](#types-SecretHash) ([`Maybe`](#types-Maybe) [`Outcome`](#types-Outcome))
+  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option bytes)))`
     + **Example:** <span id="example-id">`Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB"`</span>
 
 <details>
@@ -716,12 +708,12 @@ Bool primitive.
 Bridge storage.
 
 **Structure:** 
-  * ***swaps*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Swap`](#types-Swap)    
-Container with all swaps.
-  * ***outcomes*** :[`BigMap`](#types-BigMap) [`SwapId`](#types-SwapId) [`Outcome`](#types-Outcome)    
-Container with results of each swap.
+  * ***swaps*** :[`BigMap`](#types-BigMap) [`SecretHash`](#types-SecretHash) [`Swap`](#types-Swap)    
+Container with all current swaps.
+  * ***outcomes*** :[`BigMap`](#types-BigMap) [`SecretHash`](#types-SecretHash) [`Outcome`](#types-Outcome)    
+Container with received secrets of each swap.
 
-**Final Michelson representation:** `pair (big_map bytes (pair (pair address address) (pair nat timestamp))) (big_map bytes (or unit (or bytes bytes)))`
+**Final Michelson representation:** `pair (big_map bytes (pair (pair address (pair address nat)) (pair (pair timestamp (option nat)) (pair bytes bool)))) (big_map bytes bytes)`
 
 
 
@@ -746,7 +738,22 @@ Bytes primitive.
 ClaimRefund params.
 
 **Structure:** 
-[`SwapId`](#types-SwapId)
+[`SecretHash`](#types-SecretHash)
+
+**Final Michelson representation:** `bytes`
+
+
+
+<a name="types-ConfirmSwapParams"></a>
+
+---
+
+### `ConfirmSwapParams`
+
+ConfirmSwap entrypoint params.
+
+**Structure:** 
+[`SecretHash`](#types-SecretHash)
 
 **Final Michelson representation:** `bytes`
 
@@ -785,18 +792,20 @@ Signed number.
 Lock entrypoint params.
 
 **Structure:** 
-  * ***id*** :[`SwapId`](#types-SwapId)    
-Swap id.
   * ***to*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)    
 Address of swap reciever.
   * ***amount*** :[`Natural`](#types-Natural)    
 Number of tokens in swap.
   * ***releaseTime*** :[`Timestamp`](#types-Timestamp)    
 Time for swap process.
-  * ***secretHash*** :[`Maybe`](#types-Maybe) [`ByteString`](#types-ByteString)    
+  * ***secretHash*** :[`SecretHash`](#types-SecretHash)    
 Hash of the secret.
+  * ***fee*** :[`Maybe`](#types-Maybe) [`Natural`](#types-Natural)    
+Amount of fee that pay initiator of the contract.
+  * ***confirmed*** :[`Bool`](#types-Bool)    
+Condition which say that the initiator confirmed the swap.
 
-**Final Michelson representation:** `pair (pair bytes address) (pair nat (pair timestamp (option bytes)))`
+**Final Michelson representation:** `pair (pair address (pair nat timestamp)) (pair bytes (pair (option nat) bool))`
 
 
 
@@ -868,18 +877,12 @@ Unsigned number.
 
 ### `Outcome`
 
-Outcome storage fields.
+Outcome information.
 
-**Structure:** *one of* 
-+ **Refunded**
-[`()`](#types-lparenrparen): Swap was refunded
-+ **HashRevealed**
-[`ByteString`](#types-ByteString): Secret hash was revealed
-+ **SecretRevealed**
-[`ByteString`](#types-ByteString): Secret was revealed
+**Structure:** 
+[`ByteString`](#types-ByteString)
 
-
-**Final Michelson representation:** `or unit (or bytes bytes)`
+**Final Michelson representation:** `bytes`
 
 
 
@@ -889,33 +892,27 @@ Outcome storage fields.
 
 ### `RedeemParams`
 
-RevealSecretHash entrypoint params.
+Redeem entrypoint params.
 
 **Structure:** 
-  * ***id*** :[`SwapId`](#types-SwapId)    
-Swap id.
-  * ***secret*** :[`ByteString`](#types-ByteString)    
-Secret.
+[`ByteString`](#types-ByteString)
 
-**Final Michelson representation:** `pair bytes bytes`
+**Final Michelson representation:** `bytes`
 
 
 
-<a name="types-RevealSecretHashParams"></a>
+<a name="types-SecretHash"></a>
 
 ---
 
-### `RevealSecretHashParams`
+### `SecretHash`
 
-RevealSecretHash entrypoint params.
+Id of the swap.
 
 **Structure:** 
-  * ***id*** :[`SwapId`](#types-SwapId)    
-Swap id.
-  * ***secretHash*** :[`ByteString`](#types-ByteString)    
-Hash of the secret.
+[`ByteString`](#types-ByteString)
 
-**Final Michelson representation:** `pair bytes bytes`
+**Final Michelson representation:** `bytes`
 
 
 
@@ -936,23 +933,14 @@ Address of swap reciever.
 Number of tokens in swap.
   * ***releaseTime*** :[`Timestamp`](#types-Timestamp)    
 Time for swap process.
+  * ***fee*** :[`Maybe`](#types-Maybe) [`Natural`](#types-Natural)    
+Amount of fee that pay initiator of the contract.
+  * ***secretHash*** :[`SecretHash`](#types-SecretHash)    
+Hash of the swap secrete.
+  * ***confirmed*** :[`Bool`](#types-Bool)    
+Condition which say that the initiator confirmed the swap.
 
-**Final Michelson representation:** `pair (pair address address) (pair nat timestamp)`
-
-
-
-<a name="types-SwapId"></a>
-
----
-
-### `SwapId`
-
-Id of the swap.
-
-**Structure:** 
-[`ByteString`](#types-ByteString)
-
-**Final Michelson representation:** `bytes`
+**Final Michelson representation:** `pair (pair address (pair address nat)) (pair (pair timestamp (option nat)) (pair bytes bool))`
 
 
 
@@ -1100,18 +1088,6 @@ Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stan
 
 **Representation:** Textual error message, see [`Text`](#types-Text).
 
-<a name="errors-InvalidSecret"></a>
-
----
-
-### `InvalidSecret`
-
-**Class:** Action exception
-
-**Fires if:** Invalid secret hash
-
-**Representation:** `("InvalidSecret", ())`.
-
 <a name="errors-NotEnoughAllowance"></a>
 
 ---
@@ -1140,20 +1116,6 @@ Provided error argument will be of type (***required*** : [`Natural`](#types-Nat
 
 Provided error argument will be of type (***required*** : [`Natural`](#types-Natural), ***present*** : [`Natural`](#types-Natural)).
 
-<a name="errors-SecretHashIsAlreadySet"></a>
-
----
-
-### `SecretHashIsAlreadySet`
-
-**Class:** Action exception
-
-**Fires if:** Secret hash is already set for swap with certain id
-
-**Representation:** `("SecretHashIsAlreadySet", <error argument>)`.
-
-Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
-
 <a name="errors-SenderIsNotAdmin"></a>
 
 ---
@@ -1178,19 +1140,33 @@ Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for 
 
 **Representation:** `("SenderIsNotTheInitiator", ())`.
 
-<a name="errors-SwapIsOver"></a>
+<a name="errors-SwapIsAlreadyConfirmed"></a>
 
 ---
 
-### `SwapIsOver`
+### `SwapIsAlreadyConfirmed`
+
+**Class:** Action exception
+
+**Fires if:** Secret hash is already set for swap with certain id
+
+**Representation:** `("SwapIsAlreadyConfirmed", <error argument>)`.
+
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap id.
+
+<a name="errors-SwapIsNotConfirmed"></a>
+
+---
+
+### `SwapIsNotConfirmed`
 
 **Class:** Action exception
 
 **Fires if:** Swap time is over
 
-**Representation:** `("SwapIsOver", <error argument>)`.
+**Representation:** `("SwapIsNotConfirmed", <error argument>)`.
 
-Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stand for timestamp.
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for timestamp.
 
 <a name="errors-SwapLockAlreadyExists"></a>
 
@@ -1204,7 +1180,7 @@ Provided error argument will be of type [`Timestamp`](#types-Timestamp) and stan
 
 **Representation:** `("SwapLockAlreadyExists", <error argument>)`.
 
-Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap id.
 
 <a name="errors-SwapLockDoesNotExist"></a>
 
@@ -1218,7 +1194,7 @@ Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for 
 
 **Representation:** `("SwapLockDoesNotExist", <error argument>)`.
 
-Provided error argument will be of type [`SwapId`](#types-SwapId) and stand for swap id.
+Provided error argument will be of type [`SecretHash`](#types-SecretHash) and stand for swap id.
 
 <a name="errors-TokenOperationsArePaused"></a>
 
@@ -1259,17 +1235,3 @@ Provided error argument will be of type [`TooLongSecretError`](#types-TooLongSec
 **Representation:** `("UnsafeAllowanceChange", <error argument>)`.
 
 Provided error argument will be of type [`Natural`](#types-Natural) and stand for the previous value of approval.
-
-<a name="errors-WrongOutcomeStatus"></a>
-
----
-
-### `WrongOutcomeStatus`
-
-**Class:** Action exception
-
-**Fires if:** Not valid outcome status
-
-**Representation:** `("WrongOutcomeStatus", <error argument>)`.
-
-Provided error argument will be of type [`Text`](#types-Text) and stand for outcome status.
