@@ -477,7 +477,11 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+**Pausable:** Cannot be executed when token operations are paused.
+
 **Possible errors:**
+* [`TokenOperationsArePaused`](#errors-TokenOperationsArePaused) — Token functionality (`transfer` and similar entrypoints) is suspended.
+
 * [`SwapLockAlreadyExists`](#errors-SwapLockAlreadyExists) — Lock with this hash already exists
 
 * [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
@@ -505,7 +509,11 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+**Pausable:** Cannot be executed when token operations are paused.
+
 **Possible errors:**
+* [`TokenOperationsArePaused`](#errors-TokenOperationsArePaused) — Token functionality (`transfer` and similar entrypoints) is suspended.
+
 * [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this hash does not exists
 
 * [`SenderIsNotTheInitiator`](#errors-SenderIsNotTheInitiator) — Sender is not the initiator of this swap
@@ -535,7 +543,11 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+**Pausable:** Cannot be executed when token operations are paused.
+
 **Possible errors:**
+* [`TokenOperationsArePaused`](#errors-TokenOperationsArePaused) — Token functionality (`transfer` and similar entrypoints) is suspended.
+
 * [`TooLongSecret`](#errors-TooLongSecret) — Secret length in longer then its limit
 
 * [`SwapIsOver`](#errors-SwapIsOver) — Swap is over
@@ -567,7 +579,11 @@ Destroys the given amount of tokens on the account associated with the given add
 
 
 
+**Pausable:** Cannot be executed when token operations are paused.
+
 **Possible errors:**
+* [`TokenOperationsArePaused`](#errors-TokenOperationsArePaused) — Token functionality (`transfer` and similar entrypoints) is suspended.
+
 * [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this hash does not exists
 
 * [`FundsLock`](#errors-FundsLock) — Funds are still lock

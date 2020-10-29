@@ -752,11 +752,21 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                          DROP } } } };
                  DROP }
                { DUP;
-                 IF_LEFT { IF_LEFT { DIP 8
+                 IF_LEFT { IF_LEFT { DIP 6
                                          { DUP };
-                                     DIG 8;
-                                     DIP { DUP };
-                                     SWAP;
+                                     DIG 6;
+                                     DUP;
+                                     IF { UNIT;
+                                          PUSH string "TokenOperationsArePaused";
+                                          PAIR;
+                                          FAILWITH }
+                                        {  };
+                                     DIP 9
+                                         { DUP };
+                                     DIG 9;
+                                     DIP 2
+                                         { DUP };
+                                     DIG 2;
                                      CDR;
                                      CAR;
                                      DIP { DUP };
@@ -770,31 +780,13 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                PUSH string "SwapLockAlreadyExists";
                                                PAIR;
                                                FAILWITH };
-                                     DIP 5
+                                     DIP 6
                                          { DUP };
-                                     DIG 5;
+                                     DIG 6;
                                      DUP;
                                      SENDER;
                                      GET;
                                      IF_NONE { PUSH nat 0;
-                                               DIP 4
-                                                   { DUP };
-                                               DIG 4;
-                                               CDR;
-                                               CDR;
-                                               CAR;
-                                               DIP 5
-                                                   { DUP };
-                                               DIG 5;
-                                               CAR;
-                                               CDR;
-                                               CAR;
-                                               ADD;
-                                               PAIR;
-                                               PUSH string "NotEnoughBalance";
-                                               PAIR;
-                                               FAILWITH }
-                                             { DUP;
                                                DIP 5
                                                    { DUP };
                                                DIG 5;
@@ -808,20 +800,38 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                CDR;
                                                CAR;
                                                ADD;
+                                               PAIR;
+                                               PUSH string "NotEnoughBalance";
+                                               PAIR;
+                                               FAILWITH }
+                                             { DUP;
+                                               DIP 6
+                                                   { DUP };
+                                               DIG 6;
+                                               CDR;
+                                               CDR;
+                                               CAR;
+                                               DIP 7
+                                                   { DUP };
+                                               DIG 7;
+                                               CAR;
+                                               CDR;
+                                               CAR;
+                                               ADD;
                                                DIP { DUP };
                                                SWAP;
                                                SUB;
                                                ISNAT;
                                                IF_NONE { DUP;
-                                                         DIP 6
-                                                             { DUP };
-                                                         DIG 6;
-                                                         CDR;
-                                                         CDR;
-                                                         CAR;
                                                          DIP 7
                                                              { DUP };
                                                          DIG 7;
+                                                         CDR;
+                                                         CDR;
+                                                         CAR;
+                                                         DIP 8
+                                                             { DUP };
+                                                         DIG 8;
                                                          CAR;
                                                          CDR;
                                                          CAR;
@@ -846,43 +856,43 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                SWAP;
                                                SENDER;
                                                UPDATE;
-                                               DIP 11
+                                               DIP 12
                                                    { DROP };
-                                               DUG 10;
+                                               DUG 11;
                                                DROP 2;
                                                DROP 2 };
                                      DIP 2
                                          { DUP };
                                      DIG 2;
-                                     DIP 4
+                                     DIP 5
                                          { DUP };
-                                     DIG 4;
+                                     DIG 5;
                                      CAR;
                                      CAR;
-                                     DIP { DIP 4
+                                     DIP { DIP 5
                                                { DUP };
-                                           DIG 4;
+                                           DIG 5;
                                            CAR;
                                            CDR;
                                            CAR };
                                      PAIR;
                                      SENDER;
                                      PAIR;
-                                     DIP { DIP 4
+                                     DIP { DIP 5
                                                { DUP };
-                                           DIG 4;
+                                           DIG 5;
                                            CAR;
                                            CDR;
                                            CDR;
-                                           DIP { DIP 4
+                                           DIP { DIP 5
                                                      { DUP };
-                                                 DIG 4;
+                                                 DIG 5;
                                                  CDR;
                                                  CDR;
                                                  CAR;
-                                                 DIP { DIP 4
+                                                 DIP { DIP 5
                                                            { DUP };
-                                                       DIG 4;
+                                                       DIG 5;
                                                        CDR;
                                                        CDR;
                                                        CDR };
@@ -894,16 +904,27 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                          { DUP };
                                      DIG 3;
                                      UPDATE;
-                                     DIP 12
+                                     DIP 13
                                          { DROP };
-                                     DUG 11;
+                                     DUG 12;
                                      DROP 2;
-                                     DROP 2 }
-                                   { IF_LEFT { DIP 8
+                                     DROP 2;
+                                     DROP }
+                                   { IF_LEFT { DIP 6
                                                    { DUP };
-                                               DIG 8;
-                                               DIP { DUP };
-                                               SWAP;
+                                               DIG 6;
+                                               DUP;
+                                               IF { UNIT;
+                                                    PUSH string "TokenOperationsArePaused";
+                                                    PAIR;
+                                                    FAILWITH }
+                                                  {  };
+                                               DIP 9
+                                                   { DUP };
+                                               DIG 9;
+                                               DIP 2
+                                                   { DUP };
+                                               DIG 2;
                                                DIP { DUP };
                                                SWAP;
                                                DIP { DUP };
@@ -969,13 +990,23 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                              { DUP };
                                                          DIG 3;
                                                          UPDATE;
-                                                         DIP 12
+                                                         DIP 13
                                                              { DROP };
-                                                         DUG 11;
+                                                         DUG 12;
                                                          DROP };
                                                DROP 2;
-                                               DROP }
-                                             { DUP;
+                                               DROP 2 }
+                                             { DIP 6
+                                                   { DUP };
+                                               DIG 6;
+                                               DUP;
+                                               IF { UNIT;
+                                                    PUSH string "TokenOperationsArePaused";
+                                                    PAIR;
+                                                    FAILWITH }
+                                                  {  };
+                                               DIP { DUP };
+                                               SWAP;
                                                DUP;
                                                BLAKE2B;
                                                PUSH nat 32;
@@ -996,12 +1027,12 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                     PAIR;
                                                     FAILWITH }
                                                   {  };
-                                               DIP 12
+                                               DIP 13
                                                    { DUP };
-                                               DIG 12;
-                                               DIP 12
+                                               DIG 13;
+                                               DIP 13
                                                    { DUP };
-                                               DIG 12;
+                                               DIG 13;
                                                DIP { DUP };
                                                SWAP;
                                                DIP 4
@@ -1037,9 +1068,9 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                               PUSH string "SwapIsNotConfirmed";
                                                               PAIR;
                                                               FAILWITH };
-                                                         DIP 9
+                                                         DIP 10
                                                              { DUP };
-                                                         DIG 9;
+                                                         DIG 10;
                                                          PUSH nat 0;
                                                          DIP 2
                                                              { DUP };
@@ -1105,9 +1136,9 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                               CDR;
                                                               CAR;
                                                               UPDATE;
-                                                              DIP 12
+                                                              DIP 13
                                                                   { DROP };
-                                                              DUG 11;
+                                                              DUG 12;
                                                               DROP }
                                                             {  };
                                                          DIP 3
@@ -1121,9 +1152,9 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                              { DUP };
                                                          DIG 7;
                                                          UPDATE;
-                                                         DIP 17
+                                                         DIP 18
                                                              { DROP };
-                                                         DUG 16;
+                                                         DUG 17;
                                                          DIP 2
                                                              { DUP };
                                                          DIG 2;
@@ -1132,17 +1163,28 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                              { DUP };
                                                          DIG 7;
                                                          UPDATE;
-                                                         DIP 16
+                                                         DIP 17
                                                              { DROP };
-                                                         DUG 15;
+                                                         DUG 16;
                                                          DROP 2 };
                                                DROP 2;
                                                DROP 2;
-                                               DROP 2 } } }
-                         { IF_LEFT { DUP;
-                                     DIP 9
+                                               DROP 2;
+                                               DROP } } }
+                         { IF_LEFT { DIP 6
                                          { DUP };
-                                     DIG 9;
+                                     DIG 6;
+                                     DUP;
+                                     IF { UNIT;
+                                          PUSH string "TokenOperationsArePaused";
+                                          PAIR;
+                                          FAILWITH }
+                                        {  };
+                                     DIP { DUP };
+                                     SWAP;
+                                     DIP 10
+                                         { DUP };
+                                     DIG 10;
                                      DUP;
                                      DIP 2
                                          { DUP };
@@ -1174,9 +1216,9 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                CAR;
                                                COMPARE;
                                                NEQ;
-                                               IF { DIP 6
+                                               IF { DIP 7
                                                         { DUP };
-                                                    DIG 6;
+                                                    DIG 7;
                                                     PUSH nat 0;
                                                     DIP 2
                                                         { DUP };
@@ -1221,16 +1263,16 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                          CDR;
                                                          CAR;
                                                          UPDATE;
-                                                         DIP 9
+                                                         DIP 10
                                                              { DROP };
-                                                         DUG 8;
+                                                         DUG 9;
                                                          DROP }
                                                        {  };
                                                     DROP }
                                                   {  };
-                                               DIP 6
+                                               DIP 7
                                                    { DUP };
-                                               DIG 6;
+                                               DIG 7;
                                                PUSH nat 0;
                                                DIP 2
                                                    { DUP };
@@ -1273,9 +1315,9 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                     CAR;
                                                     CAR;
                                                     UPDATE;
-                                                    DIP 9
+                                                    DIP 10
                                                         { DROP };
-                                                    DUG 8;
+                                                    DUG 9;
                                                     DROP }
                                                   {  };
                                                DIP 2
@@ -1286,12 +1328,12 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                    { DUP };
                                                DIG 5;
                                                UPDATE;
-                                               DIP 13
+                                               DIP 14
                                                    { DROP };
-                                               DUG 12;
+                                               DUG 13;
                                                DROP 2 };
                                      DROP 2;
-                                     DROP }
+                                     DROP 2 }
                                    { IF_LEFT { DIP 8
                                                    { DUP };
                                                DIG 8;

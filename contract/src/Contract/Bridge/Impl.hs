@@ -5,6 +5,8 @@ module Contract.Bridge.Impl
 
 import Indigo
 
+import qualified Indigo.Contracts.ManagedLedger as ML
+
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridge)
 import Contract.Bridge.Types (ClaimRefundParams, ConfirmSwapParams, GetOutcomeParams, GetSwapParams,
@@ -50,6 +52,8 @@ lock
      )
   => IndigoEntrypoint sp
 lock parameter = do
+  ML.ensureNotPaused @s
+
   swaps <- getStorageField @s #swaps
   secretHash <- new$ parameter #! #lpSecretHash
   whenSome (swaps #: secretHash) $ \_ -> failCustom #swapLockAlreadyExists secretHash
@@ -69,9 +73,12 @@ confirmSwap
   :: forall s sp.
      ( sp :~> ConfirmSwapParams
      , HasBridge s
+     , HasManagedLedgerStorage s
      )
   => IndigoEntrypoint sp
 confirmSwap parameter = do
+  ML.ensureNotPaused @s
+
   swaps <- getStorageField @s #swaps
   secretHash <- new$ parameter #! #cspSecretHash
 
@@ -91,6 +98,8 @@ redeem
      )
   => IndigoEntrypoint sp
 redeem parameter = do
+  ML.ensureNotPaused @s
+
   secret <- new$ parameter #! #rpSecret
   secretHash <- new$ construct $ blake2b secret
 
@@ -122,6 +131,8 @@ claimRefund
      )
   => IndigoEntrypoint sp
 claimRefund parameter = do
+  ML.ensureNotPaused @s
+
   secretHash <- new$ parameter #! #crpSecretHash
   swaps <- getStorageField @s #swaps
   ifSome (swaps #: secretHash)
