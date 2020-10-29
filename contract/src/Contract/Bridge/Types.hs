@@ -23,7 +23,7 @@ type GetSwapParams = View SecretHash (Maybe Swap)
 type GetOutcomeParams = View SecretHash (Maybe Outcome)
 
 instance TypeHasDoc SecretHash where
-  typeDocMdDescription = "Id of the swap."
+  typeDocMdDescription = "Secret hash of the swap."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
 
 instance Buildable SecretHash where
@@ -34,7 +34,7 @@ data Swap = Swap
   , sTo          :: Address
   , sAmount      :: Natural
   , sReleaseTime :: Timestamp
-  , sFee         :: Maybe Natural
+  , sFee         :: Natural
   , sSecretHash  :: SecretHash
   , sConfirmed   :: Bool
   } deriving stock (Generic, Show, Eq)
@@ -81,7 +81,7 @@ data LockParams = LockParams
   , lpAmount      :: Natural
   , lpReleaseTime :: Timestamp
   , lpSecretHash  :: SecretHash
-  , lpFee         :: Maybe Natural
+  , lpFee         :: Natural
   , lpConfirmed   :: Bool
   } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)

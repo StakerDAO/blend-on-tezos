@@ -54,10 +54,7 @@ lock parameter = do
   secretHash <- new$ parameter #! #lpSecretHash
   whenSome (swaps #: secretHash) $ \_ -> failCustom #swapLockAlreadyExists secretHash
 
-  fee <- ifSome (parameter #! #lpFee) (\f -> new$ f) (new$ 0 nat)
-  debitFrom @s sender $ parameter #! #lpAmount + fee
-
-  confirmed <- ifSome (parameter #! #lpFee) (\_ -> new$ False) (new$ True)
+  debitFrom @s sender $ parameter #! #lpAmount + parameter #! #lpFee
 
   setStorageField @s #swaps $ swaps +: (secretHash, construct
     ( sender
@@ -66,7 +63,7 @@ lock parameter = do
     , parameter #! #lpReleaseTime
     , parameter #! #lpFee
     , parameter #! #lpSecretHash
-    , varExpr confirmed
+    , parameter #! #lpConfirmed
     ))
 
 confirmSwap
@@ -104,15 +101,14 @@ redeem parameter = do
 
   outcomes <- getStorageField @s #outcomes
   swaps <- getStorageField @s #swaps
-  
+
   whenSome (outcomes #: secretHash) $ \_ -> failCustom #swapIsOver secretHash
 
   ifSome (swaps #: secretHash)
     (\s -> do
        unless (s #! #sConfirmed) $ failCustom #swapIsNotConfirmed secretHash
 
-       fee <- ifSome (s #! #sFee) (\f -> new$ f) (new$ 0 nat)
-       creditTo @s (s #! #sTo) (s #! #sAmount + fee)
+       creditTo @s (s #! #sTo) (s #! #sAmount + s #! #sFee)
 
        setStorageField @s #outcomes $ outcomes +: (secretHash, construct $ varExpr secret)
        setStorageField @s #swaps $ swaps -: secretHash
@@ -133,8 +129,7 @@ claimRefund parameter = do
     (\s -> do
        when (now < s #! #sReleaseTime) $ failCustom #fundsLock $ s #! #sReleaseTime
 
-       fee <- ifSome (s #! #sFee) (\f -> new$ f) (new$ 0 nat)
-       creditTo @s (s #! #sTo) fee
+       when (s #! #sFee /= 0 nat) $ creditTo @s (s #! #sTo) $ s #! #sFee
        creditTo @s (s #! #sFrom) (s #! #sAmount)
 
        setStorageField @s #swaps $ swaps -: secretHash

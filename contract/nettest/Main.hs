@@ -68,7 +68,7 @@ simpleScenario mkInitialStorage contract = uncapsNettest $ do
     , lpTo          = bobAddr
     , lpAmount      = 100
     , lpReleaseTime = maxTimestamp
-    , lpFee         = Just 10
+    , lpFee         = 10
     , lpConfirmed   = False
     }
 
@@ -84,7 +84,7 @@ simpleScenario mkInitialStorage contract = uncapsNettest $ do
     , lpTo          = bobAddr
     , lpAmount      = 100
     , lpReleaseTime = Timestamp 10
-    , lpFee         = Just 10
+    , lpFee         = 10
     , lpConfirmed   = False
     }
 

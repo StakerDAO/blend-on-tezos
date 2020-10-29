@@ -59,7 +59,7 @@ genLock isInitiator to = do
     , lpAmount      = 100
     , lpReleaseTime = ts
     , lpSecretHash  = secretHash
-    , lpFee         = bool Nothing (Just 10) isInitiator
+    , lpFee         = bool 0 10 isInitiator
     , lpConfirmed   = not isInitiator
     }
 
