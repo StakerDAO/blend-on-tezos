@@ -35,7 +35,6 @@ data Swap = Swap
   , sAmount      :: Natural
   , sReleaseTime :: Timestamp
   , sFee         :: Natural
-  , sSecretHash  :: SecretHash
   , sConfirmed   :: Bool
   } deriving stock (Generic, Show, Eq)
     deriving anyclass (IsoValue, HasAnnotation)
@@ -50,7 +49,6 @@ instance TypeHasDoc Swap where
           , '("sAmount", "Number of tokens in swap.")
           , '("sReleaseTime", "Time for swap process.")
           , '("sFee", "Amount of fee that pay initiator of the contract.")
-          , '("sSecretHash", "Hash of the swap secrete.")
           , '("sConfirmed", "Condition which say that the initiator confirmed the swap.")
           ])
        )

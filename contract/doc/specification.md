@@ -92,7 +92,7 @@ Managed ledger connected storage.
   * ***bridge*** :[`BridgeStorage`](#types-BridgeStorage)    
 Bridge connected storage.
 
-**Final Michelson representation:** `pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address (pair address nat)) (pair (pair timestamp (option nat)) (pair bytes bool)))) (big_map bytes bytes))`
+**Final Michelson representation:** `pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address (pair address nat)) (pair timestamp (pair nat bool)))) (big_map bytes bytes))`
 
 
 
@@ -464,8 +464,8 @@ Destroys the given amount of tokens on the account associated with the given add
 
 **Argument:** 
   + **In Haskell:** [`LockParams`](#types-LockParams)
-  + **In Michelson:** `(pair (pair (address %lpTo) (pair (nat %lpAmount) (timestamp %lpReleaseTime))) (pair (bytes %lpSecretHash) (pair (option %lpFee nat) (bool %lpConfirmed))))`
-    + **Example:** <span id="example-id">`Pair (Pair "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB" (Pair 0 "2019-07-26T12:09:12Z")) (Pair 0x0a (Pair (Some 0) True))`</span>
+  + **In Michelson:** `(pair (pair (address %lpTo) (pair (nat %lpAmount) (timestamp %lpReleaseTime))) (pair (bytes %lpSecretHash) (pair (nat %lpFee) (bool %lpConfirmed))))`
+    + **Example:** <span id="example-id">`Pair (Pair "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB" (Pair 0 "2019-07-26T12:09:12Z")) (Pair 0x0a (Pair 0 True))`</span>
 
 <details>
   <summary><b>How to call this entrypoint</b></summary>
@@ -582,7 +582,7 @@ Destroys the given amount of tokens on the account associated with the given add
 
 **Argument:** 
   + **In Haskell:** [`View`](#types-View) [`SecretHash`](#types-SecretHash) ([`Maybe`](#types-Maybe) [`Swap`](#types-Swap))
-  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option (pair (pair (address %sFrom) (pair (address %sTo) (nat %sAmount))) (pair (pair (timestamp %sReleaseTime) (option %sFee nat)) (pair (bytes %sSecretHash) (bool %sConfirmed)))))))`
+  + **In Michelson:** `(pair (bytes %viewParam) (contract %viewCallbackTo (option (pair (pair (address %sFrom) (pair (address %sTo) (nat %sAmount))) (pair (timestamp %sReleaseTime) (pair (nat %sFee) (bool %sConfirmed)))))))`
     + **Example:** <span id="example-id">`Pair 0x0a "KT1AEseqMV6fk2vtvQCVyA7ZCaxv7cpxtXdB"`</span>
 
 <details>
@@ -716,7 +716,7 @@ Container with all current swaps.
   * ***outcomes*** :[`BigMap`](#types-BigMap) [`SecretHash`](#types-SecretHash) [`Outcome`](#types-Outcome)    
 Container with received secrets of each swap.
 
-**Final Michelson representation:** `pair (big_map bytes (pair (pair address (pair address nat)) (pair (pair timestamp (option nat)) (pair bytes bool)))) (big_map bytes bytes)`
+**Final Michelson representation:** `pair (big_map bytes (pair (pair address (pair address nat)) (pair timestamp (pair nat bool)))) (big_map bytes bytes)`
 
 
 
@@ -803,12 +803,12 @@ Number of tokens in swap.
 Time for swap process.
   * ***secretHash*** :[`SecretHash`](#types-SecretHash)    
 Hash of the secret.
-  * ***fee*** :[`Maybe`](#types-Maybe) [`Natural`](#types-Natural)    
+  * ***fee*** :[`Natural`](#types-Natural)    
 Amount of fee that pay initiator of the contract.
   * ***confirmed*** :[`Bool`](#types-Bool)    
 Condition which say that the initiator confirmed the swap.
 
-**Final Michelson representation:** `pair (pair address (pair nat timestamp)) (pair bytes (pair (option nat) bool))`
+**Final Michelson representation:** `pair (pair address (pair nat timestamp)) (pair bytes (pair nat bool))`
 
 
 
@@ -910,7 +910,7 @@ Redeem entrypoint params.
 
 ### `SecretHash`
 
-Id of the swap.
+Secret hash of the swap.
 
 **Structure:** 
 [`ByteString`](#types-ByteString)
@@ -936,14 +936,12 @@ Address of swap reciever.
 Number of tokens in swap.
   * ***releaseTime*** :[`Timestamp`](#types-Timestamp)    
 Time for swap process.
-  * ***fee*** :[`Maybe`](#types-Maybe) [`Natural`](#types-Natural)    
+  * ***fee*** :[`Natural`](#types-Natural)    
 Amount of fee that pay initiator of the contract.
-  * ***secretHash*** :[`SecretHash`](#types-SecretHash)    
-Hash of the swap secrete.
   * ***confirmed*** :[`Bool`](#types-Bool)    
 Condition which say that the initiator confirmed the swap.
 
-**Final Michelson representation:** `pair (pair address (pair address nat)) (pair (pair timestamp (option nat)) (pair bytes bool))`
+**Final Michelson representation:** `pair (pair address (pair address nat)) (pair timestamp (pair nat bool))`
 
 
 

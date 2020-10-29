@@ -62,7 +62,6 @@ lock parameter = do
     , parameter #! #lpAmount
     , parameter #! #lpReleaseTime
     , parameter #! #lpFee
-    , parameter #! #lpSecretHash
     , parameter #! #lpConfirmed
     ))
 

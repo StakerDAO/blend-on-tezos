@@ -47,7 +47,6 @@ test_Bridge =
                   , sAmount      = lpAmount
                   , sReleaseTime = lpReleaseTime
                   , sFee         = lpFee
-                  , sSecretHash  = lpSecretHash
                   , sConfirmed   = lpConfirmed
                   }
               checkThat "Outcome doesn't exists" $
@@ -73,7 +72,6 @@ test_Bridge =
                   , sAmount      = lpAmount
                   , sReleaseTime = lpReleaseTime
                   , sFee         = lpFee
-                  , sSecretHash  = lpSecretHash
                   , sConfirmed   = lpConfirmed
                   }
               checkThat "Outcome doesn't exists" $
@@ -116,7 +114,6 @@ test_Bridge =
                     , sAmount      = lpAmount
                     , sReleaseTime = lpReleaseTime
                     , sFee         = lpFee
-                    , sSecretHash  = lpSecretHash
                     , sConfirmed   = True
                     }
 
@@ -288,7 +285,6 @@ test_Bridge =
                   , sAmount      = lpAmount
                   , sReleaseTime = lpReleaseTime
                   , sFee         = lpFee
-                  , sSecretHash  = lpSecretHash
                   , sConfirmed   = lpConfirmed
                   }
                 ]
