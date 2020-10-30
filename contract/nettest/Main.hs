@@ -24,6 +24,9 @@ import Contract.Bridge (ClaimRefundParams (..), ConfirmSwapParams (..), LockPara
                         RedeemParams (..), SecretHash (..))
 import Tezos.Crypto (blake2b)
 
+tokenBase :: Natural
+tokenBase = 10 ^ (18 :: Natural)
+
 main :: IO ()
 main = displayUncaughtException do
   cfg <- execParser $ parserInfo
@@ -41,7 +44,8 @@ main = displayUncaughtException do
       ML.simpleScenario (\addr -> mkStorage addr addr mempty) blndOnTezosContract impl
       niComment impl "Bridge scenario"
       simpleScenario (\alice bob lockSaver ->
-        mkStorage alice lockSaver $ fromList [(alice, 1000), (bob, 1000)]) blndOnTezosContract impl
+        mkStorage alice lockSaver $ 
+          fromList [(alice, 1000 * tokenBase), (bob, 1000 * tokenBase)]) blndOnTezosContract impl
 
 simpleScenario
   :: forall m storage.
@@ -67,9 +71,9 @@ simpleScenario mkInitialStorage contract = uncapsNettest $ do
   callFrom alice c (Call @"Lock") $ LockParams
     { lpSecretHash  = secretHash1
     , lpTo          = bobAddr
-    , lpAmount      = 100
+    , lpAmount      = 100 * tokenBase
     , lpReleaseTime = maxTimestamp
-    , lpFee         = 10
+    , lpFee         = 10 * tokenBase
     , lpConfirmed   = False
     }
 
@@ -83,9 +87,9 @@ simpleScenario mkInitialStorage contract = uncapsNettest $ do
   callFrom alice c (Call @"Lock") $ LockParams
     { lpSecretHash  = secretHash2
     , lpTo          = bobAddr
-    , lpAmount      = 100
+    , lpAmount      = 100 * tokenBase
     , lpReleaseTime = Timestamp 10
-    , lpFee         = 10
+    , lpFee         = 10 * tokenBase
     , lpConfirmed   = False
     }
 

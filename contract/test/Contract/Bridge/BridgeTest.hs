@@ -28,21 +28,22 @@ test_Bridge :: [TestTree]
 test_Bridge =
   [ testGroup "Lock entrypoint"
     [ testProperty "Initiator lock" $
-        withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-          lock@LockParams{..} <- forAll $ genLock True opBob
+        withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+          lock@LockParams{..} <- forAll $ genLock True (opBalances ! opAlice) opBob
           integrationalTestContract contractM $ \c -> do
             withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
             lExpectStorage @Storage c $ \st -> do
+              let fullAmount = lpAmount + lpFee
               let actualAliceBalance = getBalance opAlice st
               let actualLockSaverBalance = getBalance opLockSaver st
               let actualTotalSupply = getTotalSupply st
               actualSwap <- lookupE lpSecretHash $ getSwaps st
               checkThat "Total supply didn't changed" $
-                actualTotalSupply `shouldBe` 2000
+                actualTotalSupply `shouldBe` foldl' (+) 0 opBalances
               checkThat "Balance was locked for sender" $
-                actualAliceBalance `shouldBe` (opBalances ! opAlice - 110)
+                actualAliceBalance `shouldBe` (opBalances ! opAlice - fullAmount)
               checkThat "Locker balance increased" $
-                actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver + 110)
+                actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver + fullAmount)
               checkThat "Swap match lock params" $
                 actualSwap `shouldBe` Swap
                   { sFrom        = opAlice
@@ -56,21 +57,22 @@ test_Bridge =
                 lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
 
     , testProperty "Not initiator lock" $
-        withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-          lock@LockParams{..} <- forAll $ genLock False opBob
+        withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+          lock@LockParams{..} <- forAll $ genLock False (opBalances ! opAlice) opBob
           integrationalTestContract contractM $ \c -> do
             withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
             lExpectStorage @Storage c $ \st -> do
+              let fullAmount = lpAmount + lpFee
               let actualAliceBalance = getBalance opAlice st
               let actualLockSaverBalance = getBalance opLockSaver st
               let actualTotalSupply = getTotalSupply st
               actualSwap <- lookupE lpSecretHash $ getSwaps st
               checkThat "Total supply didn't schanged" $
-                actualTotalSupply `shouldBe` 2000
+                actualTotalSupply `shouldBe` foldl' (+) 0 opBalances
               checkThat "Balance was locked for sender" $
-                actualAliceBalance `shouldBe` (opBalances ! opAlice - 100)
+                actualAliceBalance `shouldBe` (opBalances ! opAlice - fullAmount)
               checkThat "Locker balance increased" $
-                actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver + 100)
+                actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver + fullAmount)
               checkThat "Swap match lock params" $
                 actualSwap `shouldBe` Swap
                   { sFrom        = opAlice
@@ -84,16 +86,18 @@ test_Bridge =
                 lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
 
     , testProperty "Lock with amount greater then locker balance failed" $
-        withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-          gLock <- forAll $ genLock False opBob
-          let lock@LockParams{..} = gLock{lpAmount = 3000}
+        withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+          gLock <- forAll $ genLock False (opBalances ! opAlice) opBob
+          let newLockBalance = opBalances ! opAlice + 1
+          let lock@LockParams{..} = gLock{lpAmount = newLockBalance}
           integrationalTestContract contractM $ \c -> do
             err <- expectError $ withSender opAlice $ lCallDef c $ Bridge $ CB.Lock lock
-            lExpectCustomError #notEnoughBalance (#required .! 3000, #present .! 1000) err
+            lExpectCustomError #notEnoughBalance
+              (#required .! newLockBalance, #present .! (opBalances ! opAlice)) err
 
     , testProperty "Lock with the same swap id fails" $
-        withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-          lock@LockParams{..} <- forAll $ genLock False opBob
+        withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+          lock@LockParams{..} <- forAll $ genLock False (opBalances ! opAlice) opBob
           integrationalTestContract contractM $ \c -> do
             withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
             err <- expectError $ withSender opAlice $ lCallDef c $ Bridge $ CB.Lock lock
@@ -102,8 +106,8 @@ test_Bridge =
 
   , testGroup "Confirm swap entrypoint"
       [ testProperty "Confirm swap confirm the swap" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock True opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock True (opBalances ! opAlice) opBob
             let confirmSwapParams = ConfirmSwapParams lpSecretHash
             integrationalTestContract contractM $ \c -> do
               withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
@@ -124,7 +128,7 @@ test_Bridge =
                     }
 
       , testProperty "Confirm swap fails if swap doesn't exists" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
             secretHash <- forAll genSecretHash
             let confirmSwapParams = ConfirmSwapParams secretHash
             integrationalTestContract contractM $ \c -> do
@@ -133,8 +137,8 @@ test_Bridge =
               lExpectCustomError #swapLockDoesNotExist secretHash err
 
       , testProperty "Confirm swap if sender is not the initiator" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock True opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock True (opBalances ! opAlice) opBob
             let confirmSwapParams = ConfirmSwapParams lpSecretHash
             integrationalTestContract contractM $ \c -> do
               withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
@@ -146,8 +150,8 @@ test_Bridge =
               lExpectCustomError_ #senderIsNotTheInitiator err
 
       , testProperty "Confirm swap fails if swap was already confirmed" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            lock@LockParams{..} <- forAll $ genLock True opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            lock@LockParams{..} <- forAll $ genLock True (opBalances ! opAlice) opBob
             let confirmSwapParams = ConfirmSwapParams lpSecretHash
             integrationalTestContract contractM $ \c -> do
               withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
@@ -159,8 +163,8 @@ test_Bridge =
 
   , testGroup "Redeem entrypoint"
       [ testProperty "Redeem works for non initiator" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock True opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock True (opBalances ! opAlice) opBob
             (redeem@RedeemParams{..}, sh) <- forAll genRedeem
             let lock@LockParams{..} = gLock {lpSecretHash = sh}
             let confirmSwapParams = ConfirmSwapParams lpSecretHash
@@ -176,15 +180,15 @@ test_Bridge =
                 checkThat "Outcome secret revealed" $
                   actualOutcome `shouldBe` Outcome rpSecret
                 checkThat "Total supply didn't schanged" $
-                  actualTotalSupply `shouldBe` 2000
+                  actualTotalSupply `shouldBe` foldl' (+) 0 opBalances
                 checkThat "Bob balance changed" $
-                  actualBobBalance `shouldBe` (opBalances ! opBob + 110)
+                  actualBobBalance `shouldBe` (opBalances ! opBob + lpAmount + lpFee)
                 checkThat "Locker balance changed" $
                   actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver)
 
       , testProperty "Redeem works for non initiator" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock False opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock False (opBalances ! opAlice) opBob
             (redeem@RedeemParams{..}, sh) <- forAll genRedeem
             let lock@LockParams{..} = gLock {lpSecretHash = sh}
             integrationalTestContract contractM $ \c -> do
@@ -198,15 +202,15 @@ test_Bridge =
                 checkThat "Outcome secret revealed" $
                   actualOutcome `shouldBe` Outcome rpSecret
                 checkThat "Total supply didn't schanged" $
-                  actualTotalSupply `shouldBe` 2000
+                  actualTotalSupply `shouldBe` foldl' (+) 0 opBalances
                 checkThat "Bob balance changed" $
-                  actualBobBalance `shouldBe` (opBalances ! opBob + 100)
+                  actualBobBalance `shouldBe` (opBalances ! opBob + lpAmount + lpFee)
                 checkThat "Locker balance changed" $
                   actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver)
 
       , testProperty "Redeem fails with long secret" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock True opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock True (opBalances ! opAlice) opBob
             (gRedeem, _) <- forAll genRedeem
             (s, sh) <- forAll genLongSecret
             let lock@LockParams{..} = gLock {lpSecretHash = sh}
@@ -217,16 +221,16 @@ test_Bridge =
               lExpectCustomError #tooLongSecret (TooLongSecretError 32 64) err
 
       , testProperty "Redeem fails if swap doesn't exists" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            LockParams{..} <- forAll $ genLock False opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            LockParams{..} <- forAll $ genLock False (opBalances ! opAlice) opBob
             (redeem@RedeemParams{..}, sh) <- forAll genRedeem
             integrationalTestContract contractM $ \c -> do
               err <- expectError $ withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
               lExpectCustomError #swapLockDoesNotExist sh err
 
       , testProperty "Redeem fails if swap was finished" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock False opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock False (opBalances ! opAlice) opBob
             (redeem@RedeemParams{..}, sh) <- forAll genRedeem
             let lock@LockParams{..} = gLock {lpSecretHash = sh}
             integrationalTestContract contractM $ \c -> do
@@ -238,8 +242,8 @@ test_Bridge =
 
   , testGroup "Refund entrypoint"
       [ testProperty "Refund works" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock True opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock True (opBalances ! opAlice) opBob
             let refund = ClaimRefundParams lpSecretHash
                 lock@LockParams{..} = gLock {lpReleaseTime = minTimestamp}
             integrationalTestContract contractM $ \c -> do
@@ -253,16 +257,16 @@ test_Bridge =
                 checkThat "Outcome doesn't exists" $
                   lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
                 checkThat "Total supply didn't schanged" $
-                  actualTotalSupply `shouldBe` 2000
+                  actualTotalSupply `shouldBe` foldl' (+) 0 opBalances
                 checkThat "Alice balance changed" $
-                  actualAliceBalance `shouldBe` (opBalances ! opAlice - 10)
+                  actualAliceBalance `shouldBe` (opBalances ! opAlice - lpFee)
                 checkThat "Bob balance changed" $
-                  actualBobBalance `shouldBe` (opBalances ! opBob + 10)
+                  actualBobBalance `shouldBe` (opBalances ! opBob + lpFee)
                 checkThat "Locker balance didn't changed" $
                   actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver)
 
       , testProperty "Refund fails if swap doesn't exists" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
             secretHash <- forAll genSecretHash
             let refund = ClaimRefundParams secretHash
             integrationalTestContract contractM $ \c -> do
@@ -271,8 +275,8 @@ test_Bridge =
               lExpectCustomError #swapLockDoesNotExist secretHash err
 
       , testProperty "Refund fails if swap is not over" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock True opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock True (opBalances ! opAlice) opBob
             let refund = ClaimRefundParams lpSecretHash
                 lock@LockParams{..} = gLock {lpReleaseTime = maxTimestamp}
             integrationalTestContract contractM $ \c -> do
@@ -284,8 +288,8 @@ test_Bridge =
 
   , testGroup "View entrypoints"
       [ testProperty "Get swap and outcome" $
-          withBridgeContractP 10 $ \contractM OrigParams{..} -> do
-            gLock <- forAll $ genLock False opBob
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock False (opBalances ! opAlice) opBob
             (redeem@RedeemParams{..}, sh) <- forAll genRedeem
             let lock@LockParams{..} = gLock {lpSecretHash = sh}
             integrationalTestContract contractM $ \c -> do

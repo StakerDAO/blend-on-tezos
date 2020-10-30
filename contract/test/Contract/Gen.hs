@@ -13,16 +13,23 @@ import Prelude
 import qualified Data.Coerce as DC
 import Data.Map (fromList)
 import Hedgehog (MonadGen)
-import Hedgehog.Gen (bytes, discard)
+import Hedgehog.Gen (bytes, discard, integral)
 import Hedgehog.Gen.Tezos.Core (maxTimestamp)
 import Hedgehog.Gen.Tezos.Crypto (genKeyHash)
-import Hedgehog.Range (singleton)
+import Hedgehog.Range (linear, singleton)
 import Lorentz (Address)
 import Tezos.Address (Address (..))
 import Tezos.Crypto (blake2b)
 
 import Contract.Bridge (LockParams (..), RedeemParams (..), SecretHash (..))
 import Contract.TestUtil (OrigParams (..))
+
+tokenBase :: Natural
+tokenBase = 10 ^ (18 :: Natural)
+
+-- TODO set from to 0, after ManagedLedger contract fix
+genNatural :: MonadGen m => Natural -> Natural -> m Natural
+genNatural from to = integral @_ @Natural (linear from to)
 
 genLongSecret :: MonadGen m => m (ByteString, SecretHash)
 genLongSecret = do
@@ -41,30 +48,42 @@ genSecretHash = DC.coerce <$> genByteString
 
 genOrigParams :: MonadGen m => m OrigParams
 genOrigParams = do
-  aliceAddress <- genAddress
-  bobAddress <- genAddress
+  (aliceAddress, aliceBalance) <- mzip genAddress $ genNatural 1 1000
+  (bobAddress, bobBalance) <- mzip genAddress $ genNatural 1 1000
   lockSaverAddress <- genAddress
   when ( aliceAddress == bobAddress
       || bobAddress == lockSaverAddress
       || aliceAddress == lockSaverAddress
        ) discard
   pure OrigParams
-    { opBalances = fromList [(aliceAddress, 1000), (bobAddress, 1000), (lockSaverAddress, 0)]
+    { opBalances = fromList
+      [ (aliceAddress, aliceBalance * tokenBase)
+      , (bobAddress, bobBalance * tokenBase)
+      , (lockSaverAddress, 0)
+      ]
     , opAlice = aliceAddress
     , opBob = bobAddress
     , opLockSaver = lockSaverAddress
     }
+  where
+    mzip ma mb = do
+      a <- ma
+      b <- mb
+      pure (a, b)
 
-genLock :: MonadGen m => Bool -> Address -> m LockParams
-genLock isInitiator to = do
-  secretHash <- genSecretHash
+genLock :: MonadGen m => Bool -> Natural -> Address -> m LockParams
+genLock isInitiator lb to = do
+  let lockerBalance = lb `div` tokenBase
   let ts = maxTimestamp
+  amount <- genNatural 1 lockerBalance
+  fee <- (\n -> bool 0 n isInitiator) <$> genNatural 0 (lockerBalance - amount)
+  secretHash <- genSecretHash
   pure LockParams
     { lpTo          = to
-    , lpAmount      = 100
+    , lpAmount      = tokenBase * amount
     , lpReleaseTime = ts
     , lpSecretHash  = secretHash
-    , lpFee         = bool 0 10 isInitiator
+    , lpFee         = tokenBase * fee
     , lpConfirmed   = not isInitiator
     }
 
