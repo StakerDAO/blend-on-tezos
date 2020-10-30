@@ -38,24 +38,25 @@ main = displayUncaughtException do
     scenario :: NettestScenario m
     scenario impl = do
       niComment impl "Token scenario"
-      ML.simpleScenario (`mkStorage` mempty) blndOnTezosContract impl
+      ML.simpleScenario (\addr -> mkStorage addr addr mempty) blndOnTezosContract impl
       niComment impl "Bridge scenario"
-      simpleScenario (\alice bob -> mkStorage alice $ fromList [(alice, 1000), (bob, 1000)])
-        blndOnTezosContract impl
+      simpleScenario (\alice bob lockSaver ->
+        mkStorage alice lockSaver $ fromList [(alice, 1000), (bob, 1000)]) blndOnTezosContract impl
 
 simpleScenario
   :: forall m storage.
      ( Monad m
      , NiceStorage storage
      )
-  => (Address -> Address -> storage)
+  => (Address -> Address -> Address -> storage)
   -> Contract Parameter storage
   -> NettestImpl m
   -> m ()
 simpleScenario mkInitialStorage contract = uncapsNettest $ do
   aliceAddr <- resolveNettestAddress
   bobAddr <- newAddress "bob"
-  c <- originateSimple "BlndOnTezos" (mkInitialStorage aliceAddr bobAddr) contract
+  lockSaverAddress <- newAddress "lockSaver"
+  c <- originateSimple "BlndOnTezos" (mkInitialStorage aliceAddr bobAddr lockSaverAddress) contract
   let secret = ("secret" :: ByteString)
       secretHash1 = SecretHash $ blake2b $ DC.coerce secret
       secretHash2 = SecretHash ("secretHash2" :: ByteString)

@@ -9,6 +9,7 @@ module Contract.Bridge.Types
   , ClaimRefundParams (..)
   , GetSwapParams
   , GetOutcomeParams
+  , SwapTransferOperation (..)
   ) where
 
 import Indigo
@@ -157,3 +158,9 @@ instance TypeHasDoc TooLongSecretError where
           ])
        )
     ]
+
+data SwapTransferOperation
+  = FromAddress ()
+  | ToAddress ()
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (IsoValue, HasAnnotation)

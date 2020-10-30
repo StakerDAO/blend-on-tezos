@@ -7,11 +7,12 @@ module Contract.TestUtil
   , getTotalSupply
   , getSwaps
   , getOutcomes
+  , getBalance
   ) where
 
 import Prelude
 
-import Lorentz (Address, unBigMap)
+import Lorentz (Address, arg, unBigMap)
 import Lorentz.Test (TestError (..))
 
 import Contract.BlndOnTezos (Storage (..))
@@ -20,15 +21,16 @@ import Contract.Token (LedgerValue, ManagedLedgerStorage (..))
 import Data.Map (lookup)
 
 data OrigParams = OrigParams
-  { opBalances :: Map Address Natural
-  , opAlice    :: Address
-  , opBob      :: Address
+  { opBalances  :: Map Address Natural
+  , opAlice     :: Address
+  , opBob       :: Address
+  , opLockSaver :: Address
   } deriving Show
 
-lookupE :: (Show k, Ord k) => k -> Map k b -> Either TestError b
+lookupE :: (Show k, Ord k) => k -> Map k b -> Either TestError b
 lookupE a m = case lookup a m of
   Just b  -> Right b
-  Nothing -> Left $ CustomTestError $ "No such key in map" <> show a
+  Nothing -> Left $ CustomTestError $ "No such key in map: " <> show a
 
 shouldBe :: (Eq a, Show a) => a -> a -> Either Text ()
 shouldBe actual expected
@@ -53,4 +55,7 @@ getSwaps = unBigMap . sSwaps . sBridge
 
 getOutcomes :: Storage -> Map SecretHash Outcome
 getOutcomes = unBigMap . sOutcomes . sBridge
+
+getBalance :: Address -> Storage -> Natural
+getBalance addr = maybe 0 (arg #balance) . lookup addr . getLedger
 

@@ -92,7 +92,7 @@ Managed ledger connected storage.
   * ***bridge*** :[`BridgeStorage`](#types-BridgeStorage)    
 Bridge connected storage.
 
-**Final Michelson representation:** `pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address (pair address nat)) (pair timestamp (pair nat bool)))) (big_map bytes bytes))`
+**Final Michelson representation:** `pair (pair (pair (big_map address nat) (big_map (pair address address) nat)) (pair address (pair bool nat))) (pair (big_map bytes (pair (pair address (pair address nat)) (pair timestamp (pair nat bool)))) (pair (big_map bytes bytes) address))`
 
 
 
@@ -556,6 +556,8 @@ Destroys the given amount of tokens on the account associated with the given add
 
 * [`SwapIsNotConfirmed`](#errors-SwapIsNotConfirmed) — Swap is not confirmed
 
+* [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
+
 
 
 <a name="entrypoints-claimRefund"></a>
@@ -587,6 +589,8 @@ Destroys the given amount of tokens on the account associated with the given add
 * [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this hash does not exists
 
 * [`FundsLock`](#errors-FundsLock) — Funds are still lock
+
+* [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.
 
 
 
@@ -731,8 +735,10 @@ Bridge storage.
 Container with all current swaps.
   * ***outcomes*** :[`BigMap`](#types-BigMap) [`SecretHash`](#types-SecretHash) [`Outcome`](#types-Outcome)    
 Container with received secrets of each swap.
+  * ***lockSaver*** :[`Address (no entrypoint)`](#types-Address-lparenno-entrypointrparen)    
+Address which store all locked balances
 
-**Final Michelson representation:** `pair (big_map bytes (pair (pair address (pair address nat)) (pair timestamp (pair nat bool)))) (big_map bytes bytes)`
+**Final Michelson representation:** `pair (big_map bytes (pair (pair address (pair address nat)) (pair timestamp (pair nat bool)))) (pair (big_map bytes bytes) address)`
 
 
 

@@ -43,11 +43,16 @@ genOrigParams :: MonadGen m => m OrigParams
 genOrigParams = do
   aliceAddress <- genAddress
   bobAddress <- genAddress
-  when (aliceAddress == bobAddress) discard
+  lockSaverAddress <- genAddress
+  when ( aliceAddress == bobAddress
+      || bobAddress == lockSaverAddress
+      || aliceAddress == lockSaverAddress
+       ) discard
   pure OrigParams
-    { opBalances = fromList [(aliceAddress, 1000), (bobAddress, 1000)]
+    { opBalances = fromList [(aliceAddress, 1000), (bobAddress, 1000), (lockSaverAddress, 0)]
     , opAlice = aliceAddress
     , opBob = bobAddress
+    , opLockSaver = lockSaverAddress
     }
 
 genLock :: MonadGen m => Bool -> Address -> m LockParams

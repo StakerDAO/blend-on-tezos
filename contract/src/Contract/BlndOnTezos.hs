@@ -45,10 +45,10 @@ instance TypeHasDoc Storage where
        )
     ]
 
-mkStorage :: Address -> Map Address Natural -> Storage
-mkStorage adminAddress balances = Storage
+mkStorage :: Address -> Address -> Map Address Natural -> Storage
+mkStorage adminAddress lockSaverAddress balances = Storage
   { sToken = Token.mkStorage adminAddress balances
-  , sBridge = Bridge.mkStorage
+  , sBridge = Bridge.mkStorage lockSaverAddress
   }
 
 instance HasField Storage "ledger" (BigMap Address Token.LedgerValue) where
@@ -70,6 +70,9 @@ instance HasField Storage "swaps" (BigMap Bridge.SecretHash Bridge.Swap) where
   fieldLens = fieldLensDeeper #sBridge
 
 instance HasField Storage "outcomes" (BigMap Bridge.SecretHash Bridge.Outcome) where
+  fieldLens = fieldLensDeeper #sBridge
+
+instance HasField Storage "lockSaver" Address where
   fieldLens = fieldLensDeeper #sBridge
 
 blndOnTezosIndigo :: IndigoContract Parameter Storage

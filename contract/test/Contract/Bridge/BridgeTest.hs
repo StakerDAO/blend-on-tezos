@@ -7,7 +7,7 @@ import Prelude
 import Data.Map (lookup, (!))
 import Hedgehog (forAll)
 import Hedgehog.Gen.Tezos.Core (maxTimestamp, minTimestamp)
-import Lorentz (arg, mkView)
+import Lorentz (mkView)
 import Lorentz.Test (contractConsumer, expectError, lCallDef, lExpectCustomError,
                      lExpectCustomError_, lExpectStorage, lExpectViewConsumerStorage,
                      lOriginateEmpty, withSender)
@@ -21,7 +21,7 @@ import Contract.Bridge (ClaimRefundParams (..), ConfirmSwapParams (..), LockPara
 import qualified Contract.Bridge.Impl as CB
 import Contract.Gen (genLock, genLongSecret, genRedeem, genSecretHash)
 import Contract.TestSetup (integrationalTestContract, withBridgeContractP)
-import Contract.TestUtil (OrigParams (..), checkThat, getLedger, getOutcomes, getSwaps,
+import Contract.TestUtil (OrigParams (..), checkThat, getBalance, getOutcomes, getSwaps,
                           getTotalSupply, lookupE, shouldBe)
 
 test_Bridge :: [TestTree]
@@ -33,13 +33,16 @@ test_Bridge =
           integrationalTestContract contractM $ \c -> do
             withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
             lExpectStorage @Storage c $ \st -> do
-              (arg #balance -> actualBalance) <- lookupE opAlice $ getLedger st
-              actualSwap <- lookupE lpSecretHash $ getSwaps st
+              let actualAliceBalance = getBalance opAlice st
+              let actualLockSaverBalance = getBalance opLockSaver st
               let actualTotalSupply = getTotalSupply st
-              checkThat "Total supply didn't schanged" $
+              actualSwap <- lookupE lpSecretHash $ getSwaps st
+              checkThat "Total supply didn't changed" $
                 actualTotalSupply `shouldBe` 2000
               checkThat "Balance was locked for sender" $
-                actualBalance `shouldBe` (opBalances ! opAlice - 110)
+                actualAliceBalance `shouldBe` (opBalances ! opAlice - 110)
+              checkThat "Locker balance increased" $
+                actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver + 110)
               checkThat "Swap match lock params" $
                 actualSwap `shouldBe` Swap
                   { sFrom        = opAlice
@@ -58,13 +61,16 @@ test_Bridge =
           integrationalTestContract contractM $ \c -> do
             withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
             lExpectStorage @Storage c $ \st -> do
-              (arg #balance -> actualBalance) <- lookupE opAlice $ getLedger st
-              actualSwap <- lookupE lpSecretHash $ getSwaps st
+              let actualAliceBalance = getBalance opAlice st
+              let actualLockSaverBalance = getBalance opLockSaver st
               let actualTotalSupply = getTotalSupply st
+              actualSwap <- lookupE lpSecretHash $ getSwaps st
               checkThat "Total supply didn't schanged" $
                 actualTotalSupply `shouldBe` 2000
               checkThat "Balance was locked for sender" $
-                actualBalance `shouldBe` (opBalances ! opAlice - 100)
+                actualAliceBalance `shouldBe` (opBalances ! opAlice - 100)
+              checkThat "Locker balance increased" $
+                actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver + 100)
               checkThat "Swap match lock params" $
                 actualSwap `shouldBe` Swap
                   { sFrom        = opAlice
@@ -164,7 +170,8 @@ test_Bridge =
               withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
               lExpectStorage @Storage c $ \st -> do
                 actualOutcome <- lookupE lpSecretHash $ getOutcomes st
-                (arg #balance -> actualBobBalance) <- lookupE opBob $ getLedger st
+                let actualBobBalance = getBalance opBob st
+                let actualLockSaverBalance = getBalance opLockSaver st
                 let actualTotalSupply = getTotalSupply st
                 checkThat "Outcome secret revealed" $
                   actualOutcome `shouldBe` Outcome rpSecret
@@ -172,6 +179,8 @@ test_Bridge =
                   actualTotalSupply `shouldBe` 2000
                 checkThat "Bob balance changed" $
                   actualBobBalance `shouldBe` (opBalances ! opBob + 110)
+                checkThat "Locker balance changed" $
+                  actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver)
 
       , testProperty "Redeem works for non initiator" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
@@ -183,7 +192,8 @@ test_Bridge =
               withSender opBob . lCallDef c $ Bridge $ CB.Redeem redeem
               lExpectStorage @Storage c $ \st -> do
                 actualOutcome <- lookupE lpSecretHash $ getOutcomes st
-                (arg #balance -> actualBobBalance) <- lookupE opBob $ getLedger st
+                let actualBobBalance = getBalance opBob st
+                let actualLockSaverBalance = getBalance opLockSaver st
                 let actualTotalSupply = getTotalSupply st
                 checkThat "Outcome secret revealed" $
                   actualOutcome `shouldBe` Outcome rpSecret
@@ -191,6 +201,8 @@ test_Bridge =
                   actualTotalSupply `shouldBe` 2000
                 checkThat "Bob balance changed" $
                   actualBobBalance `shouldBe` (opBalances ! opBob + 100)
+                checkThat "Locker balance changed" $
+                  actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver)
 
       , testProperty "Redeem fails with long secret" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do
@@ -234,8 +246,9 @@ test_Bridge =
               withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
               withSender opAlice . lCallDef c $ Bridge $ CB.ClaimRefund refund
               lExpectStorage @Storage c $ \st -> do
-                (arg #balance -> actualAliceBalance) <- lookupE opAlice $ getLedger st
-                (arg #balance -> actualBobBalance) <- lookupE opBob $ getLedger st
+                let actualAliceBalance = getBalance opAlice st
+                let actualBobBalance = getBalance opBob st
+                let actualLockSaverBalance = getBalance opLockSaver st
                 let actualTotalSupply = getTotalSupply st
                 checkThat "Outcome doesn't exists" $
                   lookup lpSecretHash (getOutcomes st) `shouldBe` Nothing
@@ -245,6 +258,8 @@ test_Bridge =
                   actualAliceBalance `shouldBe` (opBalances ! opAlice - 10)
                 checkThat "Bob balance changed" $
                   actualBobBalance `shouldBe` (opBalances ! opBob + 10)
+                checkThat "Locker balance didn't changed" $
+                  actualLockSaverBalance `shouldBe` (opBalances ! opLockSaver)
 
       , testProperty "Refund fails if swap doesn't exists" $
           withBridgeContractP 10 $ \contractM OrigParams{..} -> do

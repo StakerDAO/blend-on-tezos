@@ -10,8 +10,8 @@ import qualified Indigo.Contracts.ManagedLedger as ML
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridge)
 import Contract.Bridge.Types (ClaimRefundParams, ConfirmSwapParams, GetOutcomeParams, GetSwapParams,
-                              LockParams, RedeemParams)
-import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
+                              LockParams, RedeemParams, SwapTransferOperation (..))
+import Contract.Token.Storage (HasManagedLedgerStorage)
 
 data Parameter
   = Lock LockParams
@@ -58,7 +58,7 @@ lock parameter = do
   secretHash <- new$ parameter #! #lpSecretHash
   whenSome (swaps #: secretHash) $ \_ -> failCustom #swapLockAlreadyExists secretHash
 
-  debitFrom @s sender $ parameter #! #lpAmount + parameter #! #lpFee
+  swapTransfer @s sender (FromAddress ()) $ parameter #! #lpAmount + parameter #! #lpFee
 
   setStorageField @s #swaps $ swaps +: (secretHash, construct
     ( sender
@@ -116,7 +116,7 @@ redeem parameter = do
     (\s -> do
        unless (s #! #sConfirmed) $ failCustom #swapIsNotConfirmed secretHash
 
-       creditTo @s (s #! #sTo) (s #! #sAmount + s #! #sFee)
+       swapTransfer @s (s #! #sTo) (ToAddress ()) $ s #! #sAmount + s #! #sFee
 
        setStorageField @s #outcomes $ outcomes +: (secretHash, construct $ varExpr secret)
        setStorageField @s #swaps $ swaps -: secretHash
@@ -139,8 +139,8 @@ claimRefund parameter = do
     (\s -> do
        when (now < s #! #sReleaseTime) $ failCustom #fundsLock $ s #! #sReleaseTime
 
-       when (s #! #sFee /= 0 nat) $ creditTo @s (s #! #sTo) $ s #! #sFee
-       creditTo @s (s #! #sFrom) (s #! #sAmount)
+       when (s #! #sFee /= 0 nat) $ swapTransfer @s (s #! #sTo) (ToAddress ()) $ s #! #sFee
+       swapTransfer @s (s #! #sFrom) (ToAddress ()) $ s #! #sAmount
 
        setStorageField @s #swaps $ swaps -: secretHash
     )
@@ -172,55 +172,16 @@ getOutcome parameter = do
 --  Helpers
 ----------------------------------------------------------------------------
 
--- | Debit the given amount of tokens from a given address in ledger.
-debitFrom
-  :: forall s from value.
-     ( from :~> Address, value :~> Natural
+swapTransfer
+  :: forall s addr value op.
+     ( addr :~> Address, value :~> Natural, op :~> SwapTransferOperation
      , HasManagedLedgerStorage s
+     , HasBridge s
      )
-  => from -> value -> IndigoProcedure
-debitFrom from val = do
-  -- Balance check and the corresponding update.
-  ledger_ <- getStorageField @s #ledger
-
-  ifSome (ledger_ #: from)
-    (\ledgerValue -> do
-        oldBalance <- new$ ledgerValue #~ #balance
-        newBalance <- ifSome (isNat $ oldBalance - val)
-          return (failNotEnoughBalance @Natural oldBalance)
-        newLedgerValue <- nonEmptyLedgerValue (newBalance !~ #balance)
-        setStorageField @s #ledger $ ledger_ !: (from, newLedgerValue)
+  => addr -> op -> value -> IndigoProcedure
+swapTransfer address op value = do
+  lockSaver <- getStorageField @s #lockSaver
+  case_ op
+    ( #cFromAddress #= \_ -> ML.debitFrom @s address value >> ML.creditTo @s lockSaver value
+    , #cToAddress #= \_ -> ML.debitFrom @s lockSaver value >> ML.creditTo @s address value
     )
-    (failNotEnoughBalance @() (0 nat))
-    where
-      failNotEnoughBalance :: forall r ex. (ex :~> Natural) => ex -> IndigoM r
-      failNotEnoughBalance curBalance = failCustom @r #notEnoughBalance $ pair
-        (val !~ #required)
-        (curBalance !~ #present)
-
--- | Credit the given amount of tokens to a given address in ledger.
-creditTo
-  :: forall s to value.
-     ( to :~> Address, value :~> Natural
-     , HasManagedLedgerStorage s
-     )
-  => to -> value -> IndigoProcedure
-creditTo to value = do
-  ledger_ <- getStorageField @s #ledger
-
-  when (value /= 0 nat) do
-    newBalance <- ifSome (ledger_ #: to)
-      (\ledgerValue -> return $ (value + ledgerValue #~ #balance) !~ #balance)
-      (return $ value !~ #balance)
-
-    setStorageField @s #ledger $ ledger_ +: (to, newBalance)
-
--- | Ensure that given 'LedgerValue' value cannot be safely removed
--- and return it.
-nonEmptyLedgerValue
-  :: ( ledgerValue :~> LedgerValue )
-  => ledgerValue -> IndigoFunction (Maybe LedgerValue)
-nonEmptyLedgerValue ledgerValue =
-  if ledgerValue #~ #balance == 0 nat
-    then return none
-    else return (some ledgerValue)

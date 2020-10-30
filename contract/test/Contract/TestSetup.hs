@@ -22,7 +22,7 @@ import Contract.TestUtil (OrigParams (..))
 
 originateBlndOnTezos :: OrigParams -> IntegrationalScenarioM (TAddress Parameter)
 originateBlndOnTezos OrigParams{..} = lOriginate blndOnTezosContract "Blnd on Tezos"
-  (mkStorage opAlice opBalances) $ toMutez 1000
+  (mkStorage opAlice opLockSaver opBalances) $ toMutez 1000
 
 withContract
   :: Monad m
@@ -52,4 +52,4 @@ originateContractForManagedLedger
   -> AlSettings
   -> IntegrationalScenarioM (TAddress Parameter)
 originateContractForManagedLedger addr (AlInitAddresses balances) =
-  originateBlndOnTezos $ OrigParams (fromList balances) addr addr
+  originateBlndOnTezos $ OrigParams (fromList balances) addr addr addr
