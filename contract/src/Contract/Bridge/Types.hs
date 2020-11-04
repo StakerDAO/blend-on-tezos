@@ -16,7 +16,7 @@ import Indigo
 
 import Fmt (Buildable (..), hexF)
 
-newtype SecretHash = SecretHash { shHash :: ByteString }
+newtype SecretHash = SecretHash { unSecretHash :: ByteString }
   deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (IsoValue, HasAnnotation)
 

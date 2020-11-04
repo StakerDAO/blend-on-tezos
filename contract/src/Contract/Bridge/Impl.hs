@@ -137,6 +137,7 @@ claimRefund parameter = do
   swaps <- getStorageField @s #swaps
   ifSome (swaps #: secretHash)
     (\s -> do
+       when (sender /= s #! #sFrom) $ failCustom_ #senderIsNotTheInitiator
        when (now < s #! #sReleaseTime) $ failCustom #fundsLock $ s #! #sReleaseTime
 
        when (s #! #sFee /= 0 nat) $ swapTransfer @s (s #! #sTo) (ToAddress ()) $ s #! #sFee

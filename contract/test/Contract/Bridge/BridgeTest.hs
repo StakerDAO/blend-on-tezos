@@ -95,7 +95,7 @@ test_Bridge =
             lExpectCustomError #notEnoughBalance
               (#required .! newLockBalance, #present .! (opBalances ! opAlice)) err
 
-    , testProperty "Lock with the same swap id fails" $
+    , testProperty "Lock with the same secret hash fails" $
         withBridgeContractP 100 $ \contractM OrigParams{..} -> do
           lock@LockParams{..} <- forAll $ genLock False (opBalances ! opAlice) opBob
           integrationalTestContract contractM $ \c -> do
@@ -105,7 +105,7 @@ test_Bridge =
     ]
 
   , testGroup "Confirm swap entrypoint"
-      [ testProperty "Confirm swap confirm the swap" $
+      [ testProperty "Confirm swap works right" $
           withBridgeContractP 100 $ \contractM OrigParams{..} -> do
             lock@LockParams{..} <- forAll $ genLock True (opBalances ! opAlice) opBob
             let confirmSwapParams = ConfirmSwapParams lpSecretHash
@@ -284,6 +284,17 @@ test_Bridge =
               err <- expectError $ withSender opAlice . lCallDef c $
                 Bridge $ CB.ClaimRefund refund
               lExpectCustomError #fundsLock maxTimestamp err
+              
+      , testProperty "Refund fails if sender is not the initiator" $
+          withBridgeContractP 100 $ \contractM OrigParams{..} -> do
+            gLock <- forAll $ genLock True (opBalances ! opAlice) opBob
+            let refund = ClaimRefundParams lpSecretHash
+                lock@LockParams{..} = gLock {lpReleaseTime = minTimestamp}
+            integrationalTestContract contractM $ \c -> do
+              withSender opAlice . lCallDef c $ Bridge $ CB.Lock lock
+              err <- expectError $ withSender opBob . lCallDef c $
+                Bridge $ CB.ClaimRefund refund
+              lExpectCustomError_ #senderIsNotTheInitiator err
       ]
 
   , testGroup "View entrypoints"
