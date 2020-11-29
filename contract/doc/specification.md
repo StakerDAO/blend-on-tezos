@@ -588,6 +588,8 @@ Destroys the given amount of tokens on the account associated with the given add
 
 * [`SwapLockDoesNotExist`](#errors-SwapLockDoesNotExist) — Lock with this hash does not exists
 
+* [`SenderIsNotTheInitiator`](#errors-SenderIsNotTheInitiator) — Sender is not the initiator of this swap
+
 * [`FundsLock`](#errors-FundsLock) — Funds are still lock
 
 * [`NotEnoughBalance`](#errors-NotEnoughBalance) — Not enough funds to perform the operation.

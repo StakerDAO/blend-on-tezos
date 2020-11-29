@@ -101,7 +101,7 @@ redeem parameter = do
   ML.ensureNotPaused @s
 
   secret <- new$ parameter #! #rpSecret
-  secretHash <- new$ construct $ blake2b secret
+  secretHash <- new$ construct $ sha256 secret
 
   maxSecretLength <- new$ 32 nat -- TODO now const but maybe make it configurable
   when (size secret > maxSecretLength) $

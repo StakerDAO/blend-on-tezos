@@ -19,7 +19,7 @@ import Hedgehog.Gen.Tezos.Crypto (genKeyHash)
 import Hedgehog.Range (linear, singleton)
 import Lorentz (Address)
 import Tezos.Address (Address (..))
-import Tezos.Crypto (blake2b)
+import Tezos.Crypto (sha256)
 
 import Contract.Bridge (LockParams (..), RedeemParams (..), SecretHash (..))
 import Contract.TestUtil (OrigParams (..))
@@ -34,7 +34,7 @@ genNatural from to = integral @_ @Natural (linear from to)
 genLongSecret :: MonadGen m => m (ByteString, SecretHash)
 genLongSecret = do
   s <- bytes $ singleton 64
-  let sh = blake2b s
+  let sh = sha256 s
   pure (s, DC.coerce sh)
 
 genByteString :: MonadGen m => m ByteString
@@ -90,6 +90,6 @@ genLock isInitiator lb to = do
 genRedeem :: MonadGen m => m (RedeemParams, SecretHash)
 genRedeem = do
   rpSecret <- genByteString
-  let secreteHash = blake2b rpSecret
+  let secreteHash = sha256 rpSecret
   pure (RedeemParams {..}, DC.coerce secreteHash)
 

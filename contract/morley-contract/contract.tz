@@ -1335,7 +1335,7 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                DIP { DUP };
                                                SWAP;
                                                DUP;
-                                               BLAKE2B;
+                                               SHA256;
                                                PUSH nat 32;
                                                DUP;
                                                DIP 3
@@ -1874,6 +1874,17 @@ code { CAST (pair (or (or (or (or (pair address (pair address nat)) (pair addres
                                                PAIR;
                                                FAILWITH }
                                              { DUP;
+                                               CAR;
+                                               CAR;
+                                               SENDER;
+                                               COMPARE;
+                                               NEQ;
+                                               IF { UNIT;
+                                                    PUSH string "SenderIsNotTheInitiator";
+                                                    PAIR;
+                                                    FAILWITH }
+                                                  {  };
+                                               DUP;
                                                CDR;
                                                CAR;
                                                NOW;

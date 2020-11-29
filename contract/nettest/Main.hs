@@ -22,7 +22,7 @@ import Util.Named ((.!))
 import Contract.BlndOnTezos (Parameter, blndOnTezosContract, mkStorage)
 import Contract.Bridge (ClaimRefundParams (..), ConfirmSwapParams (..), LockParams (..),
                         RedeemParams (..), SecretHash (..))
-import Tezos.Crypto (blake2b)
+import Tezos.Crypto (sha256)
 
 tokenBase :: Natural
 tokenBase = 10 ^ (18 :: Natural)
@@ -62,7 +62,7 @@ simpleScenario mkInitialStorage contract = uncapsNettest $ do
   lockSaverAddress <- newAddress "lockSaver"
   c <- originateSimple "BlndOnTezos" (mkInitialStorage aliceAddr bobAddr lockSaverAddress) contract
   let secret = ("secret" :: ByteString)
-      secretHash1 = SecretHash $ blake2b $ DC.coerce secret
+      secretHash1 = SecretHash $ sha256 $ DC.coerce secret
       secretHash2 = SecretHash ("secretHash2" :: ByteString)
       alice = AddressResolved aliceAddr
       bob = AddressResolved bobAddr
