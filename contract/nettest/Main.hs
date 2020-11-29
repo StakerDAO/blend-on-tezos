@@ -4,23 +4,28 @@ module Main
 
 import Prelude
 
+import qualified Data.Coerce as DC
+
 import Data.Map (fromList)
 import Hedgehog.Gen.Tezos.Core (maxTimestamp)
 import Lorentz (Address, Contract, EntrypointRef (..), NiceStorage)
-import Morley.Nettest (AddressOrAlias (..), NettestImpl, NettestScenario, NettestT, callFrom,
-                       comment, mkNettestEnv, nettestConfigParser, newAddress, niComment,
-                       originateSimple, parserInfo, resolveNettestAddress, runNettestClient,
+import Morley.Nettest (AddressOrAlias (..), NettestImpl, NettestScenario, callFrom, comment,
+                       mkNettestEnv, nettestConfigParser, newAddress, niComment, originateSimple,
+                       parserInfo, resolveNettestAddress, runNettestClient,
                        runNettestViaIntegrational, uncapsNettest)
 import qualified Morley.Nettest.ApprovableLedger as ML
 import Options.Applicative (execParser)
 import Tezos.Core (Timestamp (..))
-import Tezos.Crypto (sha256)
 import Util.Exception (displayUncaughtException)
 import Util.Named ((.!))
 
 import Contract.BlndOnTezos (Parameter, blndOnTezosContract, mkStorage)
-import Contract.Bridge (ClaimRefundParams (..), LockParams (..), RedeemParams (..),
-                        RevealSecretHashParams (..), SwapId (..))
+import Contract.Bridge (ClaimRefundParams (..), ConfirmSwapParams (..), LockParams (..),
+                        RedeemParams (..), SecretHash (..))
+import Tezos.Crypto (sha256)
+
+tokenBase :: Natural
+tokenBase = 10 ^ (18 :: Natural)
 
 main :: IO ()
 main = displayUncaughtException do
@@ -36,61 +41,57 @@ main = displayUncaughtException do
     scenario :: NettestScenario m
     scenario impl = do
       niComment impl "Token scenario"
-      ML.simpleScenario (flip mkStorage mempty) blndOnTezosContract impl
+      ML.simpleScenario (\addr -> mkStorage addr addr mempty) blndOnTezosContract impl
       niComment impl "Bridge scenario"
-      simpleScenario (\alice bob -> mkStorage alice $ fromList [(alice, 1000), (bob, 1000)])
-        blndOnTezosContract impl
+      simpleScenario (\alice bob lockSaver ->
+        mkStorage alice lockSaver $ 
+          fromList [(alice, 1000 * tokenBase), (bob, 1000 * tokenBase)]) blndOnTezosContract impl
 
 simpleScenario
-  :: forall m storage capsM.
-     ( Monad m, capsM ~ NettestT m
+  :: forall m storage.
+     ( Monad m
      , NiceStorage storage
      )
-  => (Address -> Address -> storage)
+  => (Address -> Address -> Address -> storage)
   -> Contract Parameter storage
   -> NettestImpl m
   -> m ()
 simpleScenario mkInitialStorage contract = uncapsNettest $ do
   aliceAddr <- resolveNettestAddress
   bobAddr <- newAddress "bob"
-  c <- originateSimple "BlndOnTezos" (mkInitialStorage aliceAddr bobAddr) contract
-  let swapId1 = SwapId ("swapId1" :: ByteString)
-      swapId2 = SwapId ("swapId2" :: ByteString)
-      secret = "secret" :: ByteString
-      secretHash = sha256 secret
+  lockSaverAddress <- newAddress "lockSaver"
+  c <- originateSimple "BlndOnTezos" (mkInitialStorage aliceAddr bobAddr lockSaverAddress) contract
+  let secret = ("secret" :: ByteString)
+      secretHash1 = SecretHash $ sha256 $ DC.coerce secret
+      secretHash2 = SecretHash ("secretHash2" :: ByteString)
       alice = AddressResolved aliceAddr
       bob = AddressResolved bobAddr
 
-
   comment "Lock"
   callFrom alice c (Call @"Lock") $ LockParams
-    { lpId          = swapId1
+    { lpSecretHash  = secretHash1
     , lpTo          = bobAddr
-    , lpAmount      = 100
+    , lpAmount      = 100 * tokenBase
     , lpReleaseTime = maxTimestamp
-    , lpSecretHash  = Nothing
+    , lpFee         = 10 * tokenBase
+    , lpConfirmed   = False
     }
 
-  comment "RevealSecretHash"
-  callFrom alice c (Call @"RevealSecretHash") $ RevealSecretHashParams
-    { rshpId         = swapId1
-    , rshpSecretHash = secretHash
-    }
+  comment "ConfirmSwap"
+  callFrom alice c (Call @"ConfirmSwap") $ ConfirmSwapParams secretHash1
 
   comment "Redeem"
-  callFrom bob c (Call @"Redeem") $ RedeemParams
-    { rpId     = swapId1
-    , rpSecret = secret
-    }
+  callFrom bob c (Call @"Redeem") $ RedeemParams secret
 
   comment "Lock in the past"
   callFrom alice c (Call @"Lock") $ LockParams
-    { lpId          = swapId2
+    { lpSecretHash  = secretHash2
     , lpTo          = bobAddr
-    , lpAmount      = 100
+    , lpAmount      = 100 * tokenBase
     , lpReleaseTime = Timestamp 10
-    , lpSecretHash  = Nothing
+    , lpFee         = 10 * tokenBase
+    , lpConfirmed   = False
     }
 
   comment "Refund"
-  callFrom alice c (Call @"ClaimRefund") $ ClaimRefundParams swapId2
+  callFrom alice c (Call @"ClaimRefund") $ ClaimRefundParams secretHash2

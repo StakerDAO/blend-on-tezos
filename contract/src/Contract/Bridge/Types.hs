@@ -1,39 +1,42 @@
 module Contract.Bridge.Types
   ( LockParams (..)
-  , SwapId (..)
+  , SecretHash (..)
   , Swap (..)
   , Outcome (..)
-  , RevealSecretHashParams (..)
+  , ConfirmSwapParams (..)
   , RedeemParams (..)
   , TooLongSecretError (..)
   , ClaimRefundParams (..)
   , GetSwapParams
   , GetOutcomeParams
+  , SwapTransferOperation (..)
   ) where
 
 import Indigo
 
 import Fmt (Buildable (..), hexF)
 
-type GetSwapParams = View SwapId (Maybe Swap)
-type GetOutcomeParams = View SwapId (Maybe Outcome)
-
-newtype SwapId = SwapId ByteString
+newtype SecretHash = SecretHash { unSecretHash :: ByteString }
   deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (IsoValue, HasAnnotation)
 
-instance TypeHasDoc SwapId where
-  typeDocMdDescription = "Id of the swap."
+type GetSwapParams = View SecretHash (Maybe Swap)
+type GetOutcomeParams = View SecretHash (Maybe Outcome)
+
+instance TypeHasDoc SecretHash where
+  typeDocMdDescription = "Secret hash of the swap."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
 
-instance Buildable SwapId where
-  build (SwapId sId) = hexF sId
+instance Buildable SecretHash where
+  build (SecretHash sId) = hexF sId
 
 data Swap = Swap
   { sFrom        :: Address
   , sTo          :: Address
   , sAmount      :: Natural
   , sReleaseTime :: Timestamp
+  , sFee         :: Natural
+  , sConfirmed   :: Bool
   } deriving stock (Generic, Show, Eq)
     deriving anyclass (IsoValue, HasAnnotation)
 
@@ -46,6 +49,8 @@ instance TypeHasDoc Swap where
           , '("sTo", "Address of swap reciever.")
           , '("sAmount", "Number of tokens in swap.")
           , '("sReleaseTime", "Time for swap process.")
+          , '("sFee", "Amount of fee that pay initiator of the contract.")
+          , '("sConfirmed", "Condition which say that the initiator confirmed the swap.")
           ])
        )
     ]
@@ -53,31 +58,30 @@ instance TypeHasDoc Swap where
 instance Buildable Swap where
   build = show
 
-data Outcome
-  = Refunded ()
-  | HashRevealed ByteString
-  | SecretRevealed ByteString
+newtype Outcome = Outcome { oSecret :: ByteString }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc Outcome where
-  typeDocMdDescription = "Outcome storage fields."
+  typeDocMdDescription = "Outcome information."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
-     '[ '("Refunded", '( 'Just "Swap was refunded", '[]))
-      , '("HashRevealed", '( 'Just "Secret hash was revealed", '[]))
-      , '("SecretRevealed", '( 'Just "Secret was revealed", '[]))
-      ]
+   '[ '( "Outcome", '( 'Nothing,
+         '[ '("oSecret", "Resieved secret of the swap.")
+          ])
+       )
+    ]
 
 instance Buildable Outcome where
   build = show
 
 data LockParams = LockParams
-  { lpId          :: SwapId
-  , lpTo          :: Address
+  { lpTo          :: Address
   , lpAmount      :: Natural
   , lpReleaseTime :: Timestamp
-  , lpSecretHash  :: Maybe ByteString
+  , lpSecretHash  :: SecretHash
+  , lpFee         :: Natural
+  , lpConfirmed   :: Bool
   } deriving stock (Generic, Show)
     deriving anyclass (IsoValue, HasAnnotation)
 
@@ -86,45 +90,54 @@ instance TypeHasDoc LockParams where
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
    '[ '( "LockParams", '( 'Nothing,
-         '[ '("lpId", "Swap id.")
-          , '("lpTo", "Address of swap reciever.")
+         '[ '("lpTo", "Address of swap reciever.")
           , '("lpAmount", "Number of tokens in swap.")
           , '("lpReleaseTime", "Time for swap process.")
           , '("lpSecretHash", "Hash of the secret.")
+          , '("lpFee", "Amount of fee that pay initiator of the contract.")
+          , '("lpConfirmed", "Condition which say that the initiator confirmed the swap.")
           ])
        )
     ]
 
-data RevealSecretHashParams = RevealSecretHashParams
-  { rshpId         :: SwapId
-  , rshpSecretHash :: ByteString
-  } deriving stock (Generic, Show)
-    deriving anyclass (IsoValue, HasAnnotation)
+newtype ConfirmSwapParams = ConfirmSwapParams { cspSecretHash :: SecretHash }
+  deriving stock (Generic, Show)
+  deriving anyclass (IsoValue, HasAnnotation)
 
-instance TypeHasDoc RevealSecretHashParams where
-  typeDocMdDescription = "RevealSecretHash entrypoint params."
+instance TypeHasDoc ConfirmSwapParams where
+  typeDocMdDescription = "ConfirmSwap entrypoint params."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
-   '[ '( "RevealSecretHashParams", '( 'Nothing,
-         '[ '("rshpId", "Swap id.")
-          , '("rshpSecretHash", "Hash of the secret.")
+   '[ '( "ConfirmSwapParams", '( 'Nothing,
+         '[ '("cspSecretHash", "Hash of the secret.")
           ])
        )
     ]
 
-data RedeemParams = RedeemParams
-  { rpId     :: SwapId
-  , rpSecret :: ByteString
-  } deriving stock (Generic, Show)
-    deriving anyclass (IsoValue, HasAnnotation)
+newtype RedeemParams = RedeemParams { rpSecret :: ByteString }
+  deriving stock (Generic, Show)
+  deriving anyclass (IsoValue, HasAnnotation)
 
 instance TypeHasDoc RedeemParams where
-  typeDocMdDescription = "RevealSecretHash entrypoint params."
+  typeDocMdDescription = "Redeem entrypoint params."
   typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
   type TypeDocFieldDescriptions _ =
    '[ '( "RedeemParams", '( 'Nothing,
-         '[ '("rpId", "Swap id.")
-          , '("rpSecret", "Secret.")
+         '[ '("rpSecret", "Secret.")
+          ])
+       )
+    ]
+
+newtype ClaimRefundParams = ClaimRefundParams {crpSecretHash :: SecretHash}
+  deriving stock (Generic, Show)
+  deriving anyclass (IsoValue, HasAnnotation)
+
+instance TypeHasDoc ClaimRefundParams where
+  typeDocMdDescription = "ClaimRefund params."
+  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
+  type TypeDocFieldDescriptions _ =
+   '[ '( "ClaimRefundParams", '( 'Nothing,
+         '[ '("crpSecretHash", "Swap id.")
           ])
        )
     ]
@@ -146,16 +159,8 @@ instance TypeHasDoc TooLongSecretError where
        )
     ]
 
-newtype ClaimRefundParams = ClaimRefundParams {crpId :: SwapId}
-  deriving stock (Generic, Show)
+data SwapTransferOperation
+  = FromAddress ()
+  | ToAddress ()
+  deriving stock (Generic, Show, Eq)
   deriving anyclass (IsoValue, HasAnnotation)
-
-instance TypeHasDoc ClaimRefundParams where
-  typeDocMdDescription = "ClaimRefund params."
-  typeDocMichelsonRep = homomorphicTypeDocMichelsonRep
-  type TypeDocFieldDescriptions _ =
-   '[ '( "ClaimRefundParams", '( 'Nothing,
-         '[ '("crpId", "Swap id.")
-          ])
-       )
-    ]

@@ -41,17 +41,17 @@ entrypoints
   => IndigoEntrypoint param
 entrypoints param = do
   entryCaseSimple param
-    ( #cTransfer //-> ML.transfer @storage
-    , #cApprove //-> ML.approve @storage
-    , #cApproveCAS //-> approveCAS @storage
-    , #cGetAllowance //-> ML.getAllowance @storage
-    , #cGetBalance //-> ML.getBalance @storage
-    , #cGetTotalSupply //-> ML.getTotalSupply @storage
-    , #cSetPause //-> ML.setPause @storage
-    , #cSetAdministrator //-> setAdministrator @storage
-    , #cGetAdministrator //-> getAdministrator @storage
-    , #cMint //-> ML.mint @storage
-    , #cBurn //-> ML.burn @storage
+    ( #cTransfer #= ML.transfer @storage
+    , #cApprove #= ML.approve @storage
+    , #cApproveCAS #= approveCAS @storage
+    , #cGetAllowance #= ML.getAllowance @storage
+    , #cGetBalance #= ML.getBalance @storage
+    , #cGetTotalSupply #= ML.getTotalSupply @storage
+    , #cSetPause #= ML.setPause @storage
+    , #cSetAdministrator #= setAdministrator @storage
+    , #cGetAdministrator #= getAdministrator @storage
+    , #cMint #= ML.mint @storage
+    , #cBurn #= ML.burn @storage
     )
 
 -- | Compares the expected allowance value with the actual one

@@ -1,10 +1,9 @@
 module Contract.Gen
   ( genByteString
   , genAddress
-  , genSwapId
+  , genSecretHash
   , genOrigParams
   , genLock
-  , genRevealSecretHash
   , genRedeem
   , genLongSecret
   ) where
@@ -14,23 +13,29 @@ import Prelude
 import qualified Data.Coerce as DC
 import Data.Map (fromList)
 import Hedgehog (MonadGen)
-import Hedgehog.Gen (bytes, discard)
+import Hedgehog.Gen (bytes, discard, integral)
 import Hedgehog.Gen.Tezos.Core (maxTimestamp)
 import Hedgehog.Gen.Tezos.Crypto (genKeyHash)
-import Hedgehog.Range (singleton)
+import Hedgehog.Range (linear, singleton)
 import Lorentz (Address)
 import Tezos.Address (Address (..))
 import Tezos.Crypto (sha256)
 
-import Contract.Bridge (LockParams (..), RedeemParams (..), RevealSecretHashParams (..),
-                        SwapId (..))
+import Contract.Bridge (LockParams (..), RedeemParams (..), SecretHash (..))
 import Contract.TestUtil (OrigParams (..))
 
-genLongSecret :: MonadGen m => m (ByteString, ByteString)
+tokenBase :: Natural
+tokenBase = 10 ^ (18 :: Natural)
+
+-- TODO set from to 0, after ManagedLedger contract fix
+genNatural :: MonadGen m => Natural -> Natural -> m Natural
+genNatural from to = integral @_ @Natural (linear from to)
+
+genLongSecret :: MonadGen m => m (ByteString, SecretHash)
 genLongSecret = do
   s <- bytes $ singleton 64
   let sh = sha256 s
-  pure (s, sh)
+  pure (s, DC.coerce sh)
 
 genByteString :: MonadGen m => m ByteString
 genByteString = bytes $ singleton 32
@@ -38,41 +43,53 @@ genByteString = bytes $ singleton 32
 genAddress :: MonadGen m => m Address
 genAddress = KeyAddress <$> genKeyHash
 
-genSwapId :: MonadGen m => m SwapId
-genSwapId = DC.coerce <$> genByteString
+genSecretHash :: MonadGen m => m SecretHash
+genSecretHash = DC.coerce <$> genByteString
 
 genOrigParams :: MonadGen m => m OrigParams
 genOrigParams = do
-  aliceAddress <- genAddress
-  bobAddress <- genAddress
-  when (aliceAddress == bobAddress) discard
+  (aliceAddress, aliceBalance) <- mzip genAddress $ genNatural 1 1000
+  (bobAddress, bobBalance) <- mzip genAddress $ genNatural 1 1000
+  lockSaverAddress <- genAddress
+  when ( aliceAddress == bobAddress
+      || bobAddress == lockSaverAddress
+      || aliceAddress == lockSaverAddress
+       ) discard
   pure OrigParams
-    { opBalances = fromList [(aliceAddress, 1000), (bobAddress, 1000)]
+    { opBalances = fromList
+      [ (aliceAddress, aliceBalance * tokenBase)
+      , (bobAddress, bobBalance * tokenBase)
+      , (lockSaverAddress, 0)
+      ]
     , opAlice = aliceAddress
     , opBob = bobAddress
+    , opLockSaver = lockSaverAddress
     }
+  where
+    mzip ma mb = do
+      a <- ma
+      b <- mb
+      pure (a, b)
 
-genLock :: MonadGen m => Bool -> Address -> m LockParams
-genLock withSecret to = do
-  swapId <- genSwapId
-  secretHash <- genByteString
+genLock :: MonadGen m => Bool -> Natural -> Address -> m LockParams
+genLock isInitiator lb to = do
+  let lockerBalance = lb `div` tokenBase
   let ts = maxTimestamp
+  amount <- genNatural 1 lockerBalance
+  fee <- (\n -> bool 0 n isInitiator) <$> genNatural 0 (lockerBalance - amount)
+  secretHash <- genSecretHash
   pure LockParams
-    { lpId          = DC.coerce swapId
-    , lpTo          = to
-    , lpAmount      = 100
+    { lpTo          = to
+    , lpAmount      = tokenBase * amount
     , lpReleaseTime = ts
-    , lpSecretHash  = bool Nothing (Just secretHash) withSecret
+    , lpSecretHash  = secretHash
+    , lpFee         = tokenBase * fee
+    , lpConfirmed   = not isInitiator
     }
 
-genRevealSecretHash :: MonadGen m => SwapId -> m RevealSecretHashParams
-genRevealSecretHash rshpId = do
-  rshpSecretHash <- genByteString
-  pure RevealSecretHashParams {..}
-
-genRedeem :: MonadGen m => SwapId -> m (RedeemParams, ByteString)
-genRedeem rpId = do
+genRedeem :: MonadGen m => m (RedeemParams, SecretHash)
+genRedeem = do
   rpSecret <- genByteString
   let secreteHash = sha256 rpSecret
-  pure (RedeemParams {..}, secreteHash)
+  pure (RedeemParams {..}, DC.coerce secreteHash)
 

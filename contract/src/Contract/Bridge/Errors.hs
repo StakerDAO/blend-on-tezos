@@ -4,37 +4,35 @@ import Indigo
 
 import Fmt (Buildable (..), (+|), (|+))
 
-import Contract.Bridge.Types (SwapId (..), TooLongSecretError (..))
+import Contract.Bridge.Types (SecretHash (..), TooLongSecretError (..))
 
-type instance ErrorArg "swapLockAlreadyExists" = SwapId
+type instance ErrorArg "swapLockAlreadyExists" = SecretHash
 
-type instance ErrorArg "swapLockDoesNotExist" = SwapId
+type instance ErrorArg "swapLockDoesNotExist" = SecretHash
 
-type instance ErrorArg "secretHashIsAlreadySet" = SwapId
+type instance ErrorArg "swapIsAlreadyConfirmed" = SecretHash
 
 type instance ErrorArg "senderIsNotTheInitiator" = ()
 
 type instance ErrorArg "tooLongSecret" = TooLongSecretError
 
-type instance ErrorArg "swapIsOver" = Timestamp
+type instance ErrorArg "swapIsNotConfirmed" = SecretHash
 
 type instance ErrorArg "fundsLock" = Timestamp
 
-type instance ErrorArg "wrongOutcomeStatus" = MText
-
-type instance ErrorArg "invalidSecret" = ()
+type instance ErrorArg "swapIsOver" = SecretHash
 
 instance Buildable (CustomError "swapLockAlreadyExists") where
-  build (CustomError _ swapId) =
-    "Swap lock with " +| swapId |+ " id already exists"
+  build (CustomError _ secretHash) =
+    "Swap lock with " +| secretHash |+ " hash already exists"
 
 instance Buildable (CustomError "swapLockDoesNotExist") where
-  build (CustomError _ swapId) =
-    "Swap lock with " +| swapId |+ " id does not exists"
+  build (CustomError _ secretHash) =
+    "Swap lock with " +| secretHash |+ " hash does not exists"
 
-instance Buildable (CustomError "secretHashIsAlreadySet") where
-  build (CustomError _ swapId) =
-    "Secret hash for swap with " +| swapId |+ " id is already set"
+instance Buildable (CustomError "swapIsAlreadyConfirmed") where
+  build (CustomError _ secretHash) =
+    "Swap with " +| secretHash |+ " hash is already confirmed"
 
 instance Buildable (CustomError "senderIsNotTheInitiator") where
   build (CustomError _ _) =
@@ -45,39 +43,35 @@ instance Buildable (CustomError "tooLongSecret") where
     "Expected secret length limit is " +| tlseExpected |+
     " but actual is " +| tlseActual |+ ""
 
-instance Buildable (CustomError "swapIsOver") where
-  build (CustomError _ ts) =
-    "Swap was ended at " +| ts |+ "."
+instance Buildable (CustomError "swapIsNotConfirmed") where
+  build (CustomError _ secretHash) =
+    "Swap with " +| secretHash |+ " hash is not confirmed."
 
 instance Buildable (CustomError "fundsLock") where
   build (CustomError _ ts) =
     "Funds are still lock and swap will end at " +| ts |+ "."
 
-instance Buildable (CustomError "wrongOutcomeStatus") where
-  build (CustomError _ st) =
-    "" +| st |+ " outcome status is not valid for this entrypoint."
-
-instance Buildable (CustomError "invalidSecret") where
-  build (CustomError _ _) =
-    "Hash of the secret doesn't match outcome's secret hash."
+instance Buildable (CustomError "swapIsOver") where
+  build (CustomError _ secretHash) =
+    "Swap with " +| secretHash |+ " hash is over."
 
 instance CustomErrorHasDoc "swapLockAlreadyExists" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Lock with this id already exists"
-  customErrArgumentSemantics = Just "swap id"
+    "Lock with this hash already exists"
+  customErrArgumentSemantics = Just "swap hash"
 
 instance CustomErrorHasDoc "swapLockDoesNotExist" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Lock with this id does not exists"
-  customErrArgumentSemantics = Just "swap id"
+    "Lock with this hash does not exists"
+  customErrArgumentSemantics = Just "swap hash"
 
-instance CustomErrorHasDoc "secretHashIsAlreadySet" where
+instance CustomErrorHasDoc "swapIsAlreadyConfirmed" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Secret hash is already set for swap with certain id"
-  customErrArgumentSemantics = Just "swap id"
+    "Swap is already confirmed"
+  customErrArgumentSemantics = Just "swap hash"
 
 instance CustomErrorHasDoc "senderIsNotTheInitiator" where
   customErrClass = ErrClassActionException
@@ -90,11 +84,11 @@ instance CustomErrorHasDoc "tooLongSecret" where
     "Secret length in longer then its limit"
   customErrArgumentSemantics = Just "actual and expected length"
 
-instance CustomErrorHasDoc "swapIsOver" where
+instance CustomErrorHasDoc "swapIsNotConfirmed" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Swap time is over"
-  customErrArgumentSemantics = Just "timestamp"
+    "Swap is not confirmed"
+  customErrArgumentSemantics = Just "swap hash"
 
 instance CustomErrorHasDoc "fundsLock" where
   customErrClass = ErrClassActionException
@@ -102,13 +96,8 @@ instance CustomErrorHasDoc "fundsLock" where
     "Funds are still lock"
   customErrArgumentSemantics = Just "timestamp"
 
-instance CustomErrorHasDoc "wrongOutcomeStatus" where
+instance CustomErrorHasDoc "swapIsOver" where
   customErrClass = ErrClassActionException
   customErrDocMdCause =
-    "Not valid outcome status"
-  customErrArgumentSemantics = Just "outcome status"
-
-instance CustomErrorHasDoc "invalidSecret" where
-  customErrClass = ErrClassActionException
-  customErrDocMdCause =
-    "Invalid secret hash"
+    "Swap is over"
+  customErrArgumentSemantics = Just "swap hash"

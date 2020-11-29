@@ -5,15 +5,17 @@ module Contract.Bridge.Impl
 
 import Indigo
 
+import qualified Indigo.Contracts.ManagedLedger as ML
+
 import Contract.Bridge.Errors ()
 import Contract.Bridge.Storage (HasBridge)
-import Contract.Bridge.Types (ClaimRefundParams, GetOutcomeParams, GetSwapParams, LockParams,
-                              Outcome (..), RedeemParams, RevealSecretHashParams)
-import Contract.Token.Storage (HasManagedLedgerStorage, LedgerValue)
+import Contract.Bridge.Types (ClaimRefundParams, ConfirmSwapParams, GetOutcomeParams, GetSwapParams,
+                              LockParams, RedeemParams, SwapTransferOperation (..))
+import Contract.Token.Storage (HasManagedLedgerStorage)
 
 data Parameter
   = Lock LockParams
-  | RevealSecretHash RevealSecretHashParams
+  | ConfirmSwap ConfirmSwapParams
   | Redeem RedeemParams
   | ClaimRefund ClaimRefundParams
   | GetSwap GetSwapParams
@@ -34,12 +36,12 @@ entrypoints
   => IndigoEntrypoint param
 entrypoints param = do
   entryCaseSimple param
-    ( #cLock  //-> lock @storage
-    , #cRevealSecretHash //-> revealSecretHash @storage
-    , #cRedeem //-> redeem @storage
-    , #cClaimRefund //-> claimRefund @storage
-    , #cGetSwap //-> getSwap @storage
-    , #cGetOutcome //-> getOutcome @storage
+    ( #cLock  #= lock @storage
+    , #cConfirmSwap #= confirmSwap @storage
+    , #cRedeem #= redeem @storage
+    , #cClaimRefund #= claimRefund @storage
+    , #cGetSwap #= getSwap @storage
+    , #cGetOutcome #= getOutcome @storage
     )
 
 lock
@@ -50,42 +52,43 @@ lock
      )
   => IndigoEntrypoint sp
 lock parameter = do
+  ML.ensureNotPaused @s
+
   swaps <- getStorageField @s #swaps
-  swapId <- new$ parameter #! #lpId
-  whenSome (swaps #: swapId) $ \_ -> failCustom #swapLockAlreadyExists swapId
+  secretHash <- new$ parameter #! #lpSecretHash
+  whenSome (swaps #: secretHash) $ \_ -> failCustom #swapLockAlreadyExists secretHash
 
-  debitFrom @s sender $ parameter #! #lpAmount
+  swapTransfer @s sender (FromAddress ()) $ parameter #! #lpAmount + parameter #! #lpFee
 
-  outcomes <- getStorageField @s #outcomes
-  setStorageField @s #swaps $ swaps +: (swapId, construct
+  setStorageField @s #swaps $ swaps +: (secretHash, construct
     ( sender
     , parameter #! #lpTo
     , parameter #! #lpAmount
     , parameter #! #lpReleaseTime
+    , parameter #! #lpFee
+    , parameter #! #lpConfirmed
     ))
 
-  whenSome (parameter #! #lpSecretHash) $ \hash ->
-    setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cHashRevealed hash)
-
-revealSecretHash
+confirmSwap
   :: forall s sp.
-     ( sp :~> RevealSecretHashParams
+     ( sp :~> ConfirmSwapParams
      , HasBridge s
+     , HasManagedLedgerStorage s
      )
   => IndigoEntrypoint sp
-revealSecretHash parameter = do
+confirmSwap parameter = do
+  ML.ensureNotPaused @s
+
   swaps <- getStorageField @s #swaps
-  swapId <- new$ parameter #! #rshpId
+  secretHash <- new$ parameter #! #cspSecretHash
 
-  ifNone (swaps #: swapId)
-    (void $ failCustom #swapLockDoesNotExist swapId) $
-    \s -> when (sender /= (s #! #sFrom)) $ failCustom_ #senderIsNotTheInitiator
-
-  outcomes <- getStorageField @s #outcomes
-  whenSome (outcomes #: swapId) $ \_ -> failCustom #secretHashIsAlreadySet swapId
-
-  setStorageField @s #outcomes $ outcomes +:
-    (swapId, wrap #cHashRevealed $ parameter #! #rshpSecretHash)
+  ifNone (swaps #: secretHash)
+    (void $ failCustom #swapLockDoesNotExist secretHash) $
+    \s -> do
+      when (sender /= s #! #sFrom) $ failCustom_ #senderIsNotTheInitiator
+      when (s #! #sConfirmed == constExpr True) $ failCustom #swapIsAlreadyConfirmed secretHash
+      s =: s !! (#sConfirmed, constExpr True)
+      setStorageField @s #swaps $ swaps !: (secretHash, some s)
 
 redeem
   :: forall s sp.
@@ -95,35 +98,30 @@ redeem
      )
   => IndigoEntrypoint sp
 redeem parameter = do
-  swapId <- new$ parameter #! #rpId
+  ML.ensureNotPaused @s
 
   secret <- new$ parameter #! #rpSecret
+  secretHash <- new$ construct $ sha256 secret
+
   maxSecretLength <- new$ 32 nat -- TODO now const but maybe make it configurable
   when (size secret > maxSecretLength) $
     failCustom #tooLongSecret $ construct (varExpr maxSecretLength, size secret)
 
   outcomes <- getStorageField @s #outcomes
-  ifSome (outcomes #: swapId)
-    (\o -> case_ o
-      ( #cRefunded //->
-          \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
-      , #cHashRevealed //->
-          \secretHash -> when (sha256 secret /= secretHash) $ failCustom_ #invalidSecret
-      , #cSecretRevealed //->
-          \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
-      )
-    )
-    (void $ failCustom #swapLockDoesNotExist swapId)
-
   swaps <- getStorageField @s #swaps
 
-  ifSome (swaps #: swapId)
+  whenSome (outcomes #: secretHash) $ \_ -> failCustom #swapIsOver secretHash
+
+  ifSome (swaps #: secretHash)
     (\s -> do
-       when (now >= s #! #sReleaseTime) $ failCustom #swapIsOver $ s #! #sReleaseTime
-       setStorageField @s #outcomes $ outcomes +: (swapId, wrap #cSecretRevealed secret)
-       creditTo @s (s #! #sTo) (s #! #sAmount)
+       unless (s #! #sConfirmed) $ failCustom #swapIsNotConfirmed secretHash
+
+       swapTransfer @s (s #! #sTo) (ToAddress ()) $ s #! #sAmount + s #! #sFee
+
+       setStorageField @s #outcomes $ outcomes +: (secretHash, construct $ varExpr secret)
+       setStorageField @s #swaps $ swaps -: secretHash
     )
-    (void $ failCustom #swapLockDoesNotExist swapId)
+    (void $ failCustom #swapLockDoesNotExist secretHash)
 
 claimRefund
   :: forall s sp.
@@ -133,27 +131,21 @@ claimRefund
      )
   => IndigoEntrypoint sp
 claimRefund parameter = do
-  swapId <- new$ parameter #! #crpId
-  outcomes <- getStorageField @s #outcomes
+  ML.ensureNotPaused @s
 
-  ifSome (outcomes #: swapId)
-    (\o -> case_ o
-      ( #cRefunded //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|Refunded|]
-      , #cHashRevealed //-> \_ -> pass
-      , #cSecretRevealed //-> \_ -> void $ failCustom #wrongOutcomeStatus [mt|SecretRevealed|]
-      )
-    )
-    $ pass
-
+  secretHash <- new$ parameter #! #crpSecretHash
   swaps <- getStorageField @s #swaps
-
-  ifSome (swaps #: swapId)
+  ifSome (swaps #: secretHash)
     (\s -> do
+       when (sender /= s #! #sFrom) $ failCustom_ #senderIsNotTheInitiator
        when (now < s #! #sReleaseTime) $ failCustom #fundsLock $ s #! #sReleaseTime
-       setStorageField @s #outcomes $ outcomes +: (swapId, Refunded ())
-       creditTo @s (s #! #sFrom) (s #! #sAmount)
+
+       when (s #! #sFee /= 0 nat) $ swapTransfer @s (s #! #sTo) (ToAddress ()) $ s #! #sFee
+       swapTransfer @s (s #! #sFrom) (ToAddress ()) $ s #! #sAmount
+
+       setStorageField @s #swaps $ swaps -: secretHash
     )
-    (void $ failCustom #swapLockDoesNotExist swapId)
+    (void $ failCustom #swapLockDoesNotExist secretHash)
 
 getSwap
   :: forall s sp.
@@ -181,55 +173,16 @@ getOutcome parameter = do
 --  Helpers
 ----------------------------------------------------------------------------
 
--- | Debit the given amount of tokens from a given address in ledger.
-debitFrom
-  :: forall s from value.
-     ( from :~> Address, value :~> Natural
+swapTransfer
+  :: forall s addr value op.
+     ( addr :~> Address, value :~> Natural, op :~> SwapTransferOperation
      , HasManagedLedgerStorage s
+     , HasBridge s
      )
-  => from -> value -> IndigoProcedure
-debitFrom from val = do
-  -- Balance check and the corresponding update.
-  ledger_ <- getStorageField @s #ledger
-
-  ifSome (ledger_ #: from)
-    (\ledgerValue -> do
-        oldBalance <- new$ ledgerValue #~ #balance
-        newBalance <- ifSome (isNat $ oldBalance - val)
-          return (failNotEnoughBalance @Natural oldBalance)
-        newLedgerValue <- nonEmptyLedgerValue (newBalance !~ #balance)
-        setStorageField @s #ledger $ ledger_ !: (from, newLedgerValue)
+  => addr -> op -> value -> IndigoProcedure
+swapTransfer address op value = do
+  lockSaver <- getStorageField @s #lockSaver
+  case_ op
+    ( #cFromAddress #= \_ -> ML.debitFrom @s address value >> ML.creditTo @s lockSaver value
+    , #cToAddress #= \_ -> ML.debitFrom @s lockSaver value >> ML.creditTo @s address value
     )
-    (failNotEnoughBalance @() (0 nat))
-    where
-      failNotEnoughBalance :: forall r ex. (ex :~> Natural) => ex -> IndigoM r
-      failNotEnoughBalance curBalance = failCustom @r #notEnoughBalance $ pair
-        (val !~ #required)
-        (curBalance !~ #present)
-
--- | Credit the given amount of tokens to a given address in ledger.
-creditTo
-  :: forall s to value.
-     ( to :~> Address, value :~> Natural
-     , HasManagedLedgerStorage s
-     )
-  => to -> value -> IndigoProcedure
-creditTo to value = do
-  ledger_ <- getStorageField @s #ledger
-
-  when (value /= 0 nat) do
-    newBalance <- ifSome (ledger_ #: to)
-      (\ledgerValue -> return $ (value + ledgerValue #~ #balance) !~ #balance)
-      (return $ value !~ #balance)
-
-    setStorageField @s #ledger $ ledger_ +: (to, newBalance)
-
--- | Ensure that given 'LedgerValue' value cannot be safely removed
--- and return it.
-nonEmptyLedgerValue
-  :: ( ledgerValue :~> LedgerValue )
-  => ledgerValue -> IndigoFunction (Maybe LedgerValue)
-nonEmptyLedgerValue ledgerValue =
-  if ledgerValue #~ #balance == 0 nat
-    then return none
-    else return (some ledgerValue)
